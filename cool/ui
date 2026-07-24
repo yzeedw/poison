@@ -114,7 +114,6 @@ UIS.InputBegan:Connect(function(input, gpe)
     for _, bind in pairs(Library.Registry) do
         if bind.Binding then
             if cur ~= Enum.KeyCode.Unknown then
-                -- Ignore standard screen touches and left clicks to prevent mobile UI looping bugs
                 if cur == Enum.UserInputType.Touch or cur == Enum.UserInputType.MouseButton1 then continue end
                 
                 bind.Binding = false
@@ -332,7 +331,6 @@ function Library:Window(title, size)
     Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8), Parent = TabBar })
     Create("UIPadding", { PaddingRight = UDim.new(0, 8), Parent = TabBar })
     
-    -- FIXED: Set ClipsDescendants to true so items don't overflow the UI edges
     local ContentArea = Create("Frame", { Name = "Content", Size = UDim2.new(1, -4, 1, -31), Position = UDim2.new(0, 2, 0, 29), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2, Parent = Main })
     AddInlineOutline(ContentArea)
     table.insert(Library.Elements.Windows, { Main = Main, TitleBar = TitleBar, Content = ContentArea, AccentLine = AccentLine })
@@ -481,7 +479,7 @@ function Library:Window(title, size)
         local TabButton = Create("TextButton", { Name = name, Text = name, Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.InactiveText, AutoButtonColor = false, ZIndex = 3, Parent = TabBar, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
         local TabAccent = Create("Frame", { Name = "Accent", Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 0.5, 6), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 4, Parent = TabButton })
         
-        -- FIXED: Changed TabPage to a ScrollingFrame so large lists properly scroll
+        -- TabPage ScrollingFrame fixed with explicit CanvasSize handling
         local TabPage = Create("ScrollingFrame", { 
             Name = name .. "_Page", 
             Size = UDim2.new(1, 0, 1, 0), 
@@ -491,18 +489,28 @@ function Library:Window(title, size)
             Parent = ContentArea,
             ScrollBarThickness = 2,
             CanvasSize = UDim2.new(0, 0, 0, 0),
-            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            AutomaticCanvasSize = Enum.AutomaticSize.None,
             ScrollingDirection = Enum.ScrollingDirection.Y,
             BorderSizePixel = 0
         })
-        Create("UIPadding", { PaddingBottom = UDim.new(0, 10), Parent = TabPage }) -- Ensures bottom items don't get stuck
         
-        -- FIXED: Changed the Y scale to 0 so the AutomaticCanvasSize reads the true height of the columns
         local LeftColumn = Create("Frame", { Name = "Left", Size = UDim2.new(0.5, -6, 0, 0), Position = UDim2.new(0, 4, 0, 4), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 3, Parent = TabPage, ClipsDescendants = false })
-        Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = LeftColumn})
-        local RightColumn = Create("Frame", { Name = "Right", Size = UDim2.new(0.5, -6, 0, 0), Position = UDim2.new(0.5, 2, 0, 4), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 3, Parent = TabPage, ClipsDescendants = false })
-        Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = RightColumn})
+        local LeftList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = LeftColumn})
         
+        local RightColumn = Create("Frame", { Name = "Right", Size = UDim2.new(0.5, -6, 0, 0), Position = UDim2.new(0.5, 2, 0, 4), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 3, Parent = TabPage, ClipsDescendants = false })
+        local RightList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = RightColumn})
+        
+        -- DYNAMIC CANVAS CALCULATION: Ensures all sections fit cleanly inside the scroll canvas
+        local function UpdateCanvas()
+            local leftHeight = LeftList.AbsoluteContentSize.Y
+            local rightHeight = RightList.AbsoluteContentSize.Y
+            local maxHeight = math.max(leftHeight, rightHeight)
+            TabPage.CanvasSize = UDim2.new(0, 0, 0, maxHeight + 16)
+        end
+        
+        LeftList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
+        RightList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
+
         local function Activate() 
             for _, t in pairs(Window.Tabs) do 
                 t.Page.Visible = false; 
@@ -512,6 +520,7 @@ function Library:Window(title, size)
             TabPage.Visible = true; 
             Tween(TabButton, {TextColor3 = Library.Theme.Text}); 
             Tween(TabAccent, {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 0.5, 6)})
+            UpdateCanvas()
         end
         TabButton.MouseButton1Click:Connect(Activate)
         table.insert(Window.Tabs, {Button = TabButton, Page = TabPage, Accent = TabAccent})
@@ -665,7 +674,6 @@ function Library:Window(title, size)
                     UIS.InputBegan:Connect(function(input)
                         if bind.Binding and (tick() - bind.Started) > 0.01 then
                             local bCur = (input.UserInputType == Enum.UserInputType.Keyboard) and input.KeyCode or input.UserInputType
-                            -- Do not register Touch inputs or MouseButton1 clicks as toggle configurations
                             if bCur ~= Enum.KeyCode.Unknown and bCur ~= Enum.UserInputType.Touch and bCur ~= Enum.UserInputType.MouseButton1 then
                                 bind.Binding = false
                                 bind.Key = bCur
