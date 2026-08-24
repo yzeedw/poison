@@ -54,19 +54,18 @@ local function LoadFonts()
             local ttf_path = name .. ".ttf"
             local json_path = name .. ".json"
             
+            
             if not isfile(ttf_path) then 
                 writefile(ttf_path, b64decode(game:HttpGet(url))) 
             end
             
-            if not isfile(json_path) then
-                local data = { 
-                    name = name, 
-                    faces = { 
-                        { name = "Regular", weight = 400, style = "normal", assetId = getcustomasset(ttf_path) } 
-                    } 
-                }
-                writefile(json_path, HttpService:JSONEncode(data))
-            end
+            local data = { 
+                name = name, 
+                faces = { 
+                    { name = "Regular", weight = 400, style = "normal", assetId = getcustomasset(ttf_path) } 
+                } 
+            }
+            writefile(json_path, HttpService:JSONEncode(data))
             
             LoadedFonts[name] = Font.new(getcustomasset(json_path), Enum.FontWeight.Regular)
         end)
@@ -74,6 +73,7 @@ local function LoadFonts()
     end
 end
 LoadFonts()
+
 
 local function GetFont() 
     return LoadedFonts[Library.Config.Font] or Font.fromEnum(Enum.Font.Code) 
