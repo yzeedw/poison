@@ -8,7 +8,7 @@ local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 
-local Library = { Config = { Font = "Proggy", FontSize = 12, TabFontSize = 11 } } -- Scaled tab font size to fix Proggy text size
+local Library = { Config = { Font = "Proggy", FontSize = 12, TabFontSize = 11 } }
 
 local function Tween(obj, props, time)
     TweenService:Create(obj, TweenInfo.new(time or 0.12, Enum.EasingStyle.Quad), props):Play()
@@ -324,13 +324,55 @@ function Library:Window(title, size)
     local Main = Create("Frame", { Name = "CelestiteWindow", Size = size or UDim2.new(0, 440, 0, 300), Position = UDim2.new(0.5, -220, 0.5, -150), BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, Parent = ScreenGui, ClipsDescendants = false })
     AddInlineOutline(Main)
     local AccentLine = Create("Frame", { Name = "AccentLine", Size = UDim2.new(1, -2, 0, 1), Position = UDim2.new(0, 1, 0, 1), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 10, Parent = Main })
+    
+    -- TitleBar updated to flex UIListLayout preventing overlaps
     local TitleBar = Create("Frame", { Name = "TitleBar", Size = UDim2.new(1, -4, 0, 24), Position = UDim2.new(0, 2, 0, 3), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ZIndex = 2, Parent = Main })
     AddInlineOutline(TitleBar)
-    Create("TextLabel", { Name = "Title", Text = title or "Celestite", Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = TitleBar, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
     
-    local TabBar = Create("Frame", { Name = "TabBar", Size = UDim2.new(1, -85, 1, 0), Position = UDim2.new(0, 85, 0, 0), BackgroundTransparency = 1, ZIndex = 2, Parent = TitleBar })
-    Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = TabBar })
-    Create("UIPadding", { PaddingRight = UDim.new(0, 4), Parent = TabBar })
+    Create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 8),
+        Parent = TitleBar
+    })
+    
+    Create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 4), Parent = TitleBar })
+    
+    local TitleLabel = Create("TextLabel", { 
+        Name = "Title", 
+        Text = title or "Celestite", 
+        Size = UDim2.new(0, 0, 1, 0), 
+        AutomaticSize = Enum.AutomaticSize.X, 
+        BackgroundTransparency = 1, 
+        FontFace = true, 
+        TextSize = Library.Config.FontSize, 
+        TextColor3 = Library.Theme.Text, 
+        TextXAlignment = Enum.TextXAlignment.Left, 
+        ZIndex = 3, 
+        Parent = TitleBar, 
+        TextStrokeTransparency = 0, 
+        TextStrokeColor3 = Color3.fromRGB(0,0,0) 
+    })
+    
+    local TabBar = Create("Frame", { 
+        Name = "TabBar", 
+        Size = UDim2.new(1, 0, 1, 0), 
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundTransparency = 1, 
+        ZIndex = 2, 
+        Parent = TitleBar 
+    })
+    
+    Create("UIListLayout", { 
+        FillDirection = Enum.FillDirection.Horizontal, 
+        HorizontalAlignment = Enum.HorizontalAlignment.Right, 
+        VerticalAlignment = Enum.VerticalAlignment.Center, 
+        SortOrder = Enum.SortOrder.LayoutOrder, 
+        Padding = UDim.new(0, 4), 
+        Parent = TabBar 
+    })
     
     local ContentArea = Create("Frame", { Name = "Content", Size = UDim2.new(1, -4, 1, -33), Position = UDim2.new(0, 2, 0, 30), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2, Parent = Main })
     AddInlineOutline(ContentArea)
@@ -477,7 +519,6 @@ function Library:Window(title, size)
 
     function Window:Tab(name)
         local Tab = {}
-        -- Fixed Tab height to avoid oversized bounds and adjusted tab font size scale
         local TabButton = Create("TextButton", { 
             Name = name, 
             Text = name, 
@@ -493,7 +534,6 @@ function Library:Window(title, size)
             TextStrokeTransparency = 0, 
             TextStrokeColor3 = Color3.fromRGB(0,0,0) 
         })
-        -- Compact horizontal padding for tab texts
         Create("UIPadding", { PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 3), Parent = TabButton })
         
         local TabAccent = Create("Frame", { Name = "Accent", Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 1, -1), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 4, Parent = TabButton })
@@ -998,4 +1038,5 @@ function Library:Window(title, size)
     task.delay(0.1, function() Library:UpdateTheme() end)
     return Window
 end
+
 return Library
