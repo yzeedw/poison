@@ -1,5 +1,5 @@
 --[[
-    Celestite UI Library (Fixed Tab Text & Title Overlap + Dropdown Fixes)
+    Celestite UI Library (Fixed Dropdown Selection & Config Serialization)
 ]]
 
 local Players = game:GetService("Players")
@@ -163,16 +163,19 @@ function Library:UpdateTheme()
         sli.Fill.BackgroundColor3 = Library.Theme.Accent 
         sli.Label.TextColor3 = Library.Theme.Text
         sli.Value.TextColor3 = Library.Theme.Text
+        if sli.Back then sli.Back.BackgroundColor3 = Library.Theme.SectionBackground end
     end
     for _, drop in pairs(Library.Elements.Dropdowns) do
         if drop.Box then drop.Box.BackgroundColor3 = Library.Theme.SectionBackground end
         if drop.Label then drop.Label.TextColor3 = Library.Theme.Text end
         if drop.ValueLabel then drop.ValueLabel.TextColor3 = Library.Theme.Text end
         if drop.Arrow then drop.Arrow.TextColor3 = Library.Theme.Text end
-        drop.Container.BackgroundColor3 = Library.Theme.DarkBackground
-        for _, btn in pairs(drop.Buttons) do 
-            btn.TextColor3 = Library.Theme.Text
-            if btn:IsA("TextButton") then btn.BackgroundColor3 = Library.Theme.DarkBackground end
+        if drop.Container then drop.Container.BackgroundColor3 = Library.Theme.DarkBackground end
+        for _, btn in pairs(drop.Buttons or {}) do 
+            if btn:IsA("TextButton") then 
+                btn.TextColor3 = Library.Theme.Text 
+                btn.BackgroundColor3 = Library.Theme.DarkBackground 
+            end
         end
     end
     for _, cp in pairs(Library.Elements.ColorPickers) do
@@ -192,12 +195,6 @@ function Library:UpdateTheme()
     for _, txt in pairs(Library.Elements.TextBoxes) do
         txt.Box.BackgroundColor3 = Library.Theme.SectionBackground
         txt.Input.TextColor3 = Library.Theme.Text
-    end
-    for _, sli in pairs(Library.Elements.Sliders) do 
-        sli.Fill.BackgroundColor3 = Library.Theme.Accent 
-        sli.Label.TextColor3 = Library.Theme.Text
-        sli.Value.TextColor3 = Library.Theme.Text
-        if sli.Back then sli.Back.BackgroundColor3 = Library.Theme.SectionBackground end
     end
     for _, out in pairs(Library.Elements.Outlines) do out.Color = Library.Theme.Outline end
     for _, inl in pairs(Library.Elements.Inlines) do inl.Color = Library.Theme.Inline end
@@ -580,7 +577,7 @@ function Library:Window(title, size)
                 local Input = Create("TextBox", { Text = opts.Default or "", PlaceholderText = opts.Placeholder or "...", Size = UDim2.new(1, -10, 1, 0), Position = UDim2.new(0, 5, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 table.insert(Library.Elements.TextBoxes, { Box = Box, Input = Input })
                 Input.FocusLost:Connect(function() if opts.Callback then opts.Callback(Input.Text) end end)
-                local Obj = { GetText = function() return Input.Text end, SetText = function(t) Input.Text = t end, Set = function(t) Input.Text = t end }
+                local Obj = { GetText = function() return Input.Text end, SetText = function(t) Input.Text = t end, Set = function(t) Input.Text = t end, Get = function() return Input.Text end }
                 Library.Flags[opts.Flag or opts.Name] = Obj
                 return Obj
             end
@@ -766,14 +763,14 @@ function Library:Window(title, size)
                     val = math.floor(min + (max - min) * pct)
                     SliderFill.Size = UDim2.new(pct, 0, 1, 0)
                     Value.Text = tostring(val)
-                    opts.Callback(val) 
+                    if opts.Callback then opts.Callback(val) end 
                 end
                 
                 local function Set(v) 
                     val = v
                     SliderFill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
                     Value.Text = tostring(val)
-                    opts.Callback(val) 
+                    if opts.Callback then opts.Callback(val) end 
                 end
                 
                 btn.InputBegan:Connect(function(input) 
@@ -817,24 +814,34 @@ function Library:Window(title, size)
                 local OptionHolder = Create("ScrollingFrame", { Name = "Options", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 5001, Parent = DropContainer, ScrollBarThickness = 2, CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y })
                 Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = OptionHolder })
                 
-                local buttons = {}
+                local dropElementData = {
+                    Box = Box,
+                    Label = Label,
+                    ValueLabel = ValueLabel,
+                    Arrow = Arrow,
+                    Container = DropContainer,
+                    Buttons = {}
+                }
                 
                 local function UpdateList(newOptions)
                     if newOptions then opts.Options = newOptions end
                     local options = opts.Options or {}
                     
-                    if not table.find(options, selected) then
-                        selected = options[1] or "None"
+                    if not table.find(options, selected) and #options > 0 then
+                        selected = options[1]
                         ValueLabel.Text = tostring(selected)
+                    elseif #options == 0 then
+                        selected = "None"
+                        ValueLabel.Text = "None"
                     end
                     
                     OptionHolder:ClearAllChildren()
-                    buttons = {}
+                    dropElementData.Buttons = {}
                     Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = OptionHolder })
                     
                     if #options == 0 then
                         local emptyLabel = Create("TextLabel", { Text = "No Options Available", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.InactiveText, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Center })
-                        table.insert(buttons, emptyLabel)
+                        table.insert(dropElementData.Buttons, emptyLabel)
                     else
                         for _, option in ipairs(options) do
                             local optBtn = Create("TextButton", { Text = tostring(option), Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = (tostring(option) == tostring(selected)) and Library.Theme.Accent or Library.Theme.Text, BorderSizePixel = 0, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Left, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
@@ -848,7 +855,7 @@ function Library:Window(title, size)
                                 if opts.Callback then opts.Callback(option) end
                                 UpdateList()
                             end)
-                            table.insert(buttons, optBtn)
+                            table.insert(dropElementData.Buttons, optBtn)
                         end
                     end
                     
@@ -894,15 +901,7 @@ function Library:Window(title, size)
                     end
                 }
                 
-                table.insert(Library.Elements.Dropdowns, {
-                    Box = Box,
-                    Label = Label,
-                    ValueLabel = ValueLabel,
-                    Arrow = Arrow,
-                    Container = DropContainer,
-                    Buttons = buttons
-                })
-                
+                table.insert(Library.Elements.Dropdowns, dropElementData)
                 Library.Flags[opts.Flag or opts.Name] = Obj
                 return Obj
             end
@@ -956,7 +955,7 @@ function Library:Window(title, size)
                     for _, file in pairs(files) do
                         local name = file:match("([^/\\]+)$") or file
                         name = name:gsub("%.json$", ""):gsub("%.JSON$", "")
-                        names[#names + 1] = name
+                        table.insert(names, name)
                     end
                 end)
                 ConfigList:Refresh(names)
@@ -965,23 +964,38 @@ function Library:Window(title, size)
             ConfigList.OnOpen = Refresh
 
             ConfigSection:Button({ Name = "Save Config", Callback = function()
-                if ConfigName == "" then 
+                local saveTarget = ConfigName ~= "" and ConfigName or ConfigList:Get()
+                if not saveTarget or saveTarget == "" or saveTarget == "None" then 
                     Library:Notification({ Text = "Enter a config name", Duration = 3 })
                     return 
                 end
+                
                 local data = { Theme = {}, Flags = {} }
                 for k, v in pairs(Library.Theme) do data.Theme[k] = {v.R * 255, v.G * 255, v.B * 255} end
                 for k, v in pairs(Library.Flags) do
-                    local val = (v.Get and v.Get()) or (v.GetState and v.GetState()) or (v.GetText and v.GetText())
-                    if typeof(val) == "Color3" then val = {val.R * 255, v.G * 255, v.B * 255} end
-                    data.Flags[k] = val
+                    local val = nil
+                    if type(v) == "table" then
+                        if v.Get then val = v.Get()
+                        elseif v.GetState then val = v.GetState()
+                        elseif v.GetText then val = v.GetText() end
+                    end
+                    
+                    if typeof(val) == "Color3" then 
+                        val = {val.R * 255, val.G * 255, val.B * 255} 
+                    end
+                    
+                    if val ~= nil then
+                        data.Flags[k] = val
+                    end
                 end
+                
                 local success, err = pcall(function()
-                    writefile(ConfigPath .. ConfigName .. ".json", game:GetService("HttpService"):JSONEncode(data))
+                    writefile(ConfigPath .. saveTarget .. ".json", HttpService:JSONEncode(data))
                 end)
+                
                 if success then
                     Refresh()
-                    Library:Notification({ Text = "Saved config: " .. ConfigName, Duration = 3 })
+                    Library:Notification({ Text = "Saved config: " .. saveTarget, Duration = 3 })
                 else
                     Library:Notification({ Text = "Error saving config", Duration = 5 })
                 end
@@ -991,18 +1005,28 @@ function Library:Window(title, size)
                 local selected = ConfigList:Get()
                 if not selected or selected == "" or selected == "None" then return end
                 local path = ConfigPath .. selected .. ".json"
+                if not isfile(path) then return end
+                
                 local success, err = pcall(function()
-                    local data = game:GetService("HttpService"):JSONDecode(readfile(path))
-                    for k, v in pairs(data.Theme or {}) do if Library.Theme[k] then Library.Theme[k] = Color3.fromRGB(v[1], v[2], v[3]) end end
+                    local data = HttpService:JSONDecode(readfile(path))
+                    for k, v in pairs(data.Theme or {}) do 
+                        if Library.Theme[k] then 
+                            Library.Theme[k] = Color3.fromRGB(v[1], v[2], v[3]) 
+                        end 
+                    end
                     Library:UpdateTheme()
+                    
                     for k, v in pairs(data.Flags or {}) do
-                        if Library.Flags[k] then
+                        if Library.Flags[k] and Library.Flags[k].Set then
                             local val = v
-                            if type(val) == "table" and #val == 3 then val = Color3.fromRGB(val[1], val[2], val[3]) end
+                            if type(val) == "table" and #val == 3 then 
+                                val = Color3.fromRGB(val[1], val[2], val[3]) 
+                            end
                             Library.Flags[k].Set(val)
                         end
                     end
                 end)
+                
                 if success then
                     Library:Notification({ Text = "Loaded config: " .. tostring(selected), Duration = 3 })
                 else
@@ -1017,9 +1041,7 @@ function Library:Window(title, size)
                 Refresh()
             end })
 
-            task.spawn(function()
-                Refresh()
-                task.wait(0.5)
+            task.defer(function()
                 Refresh()
             end)
             
@@ -1032,4 +1054,5 @@ function Library:Window(title, size)
     task.delay(0.1, function() Library:UpdateTheme() end)
     return Window
 end
+
 return Library
