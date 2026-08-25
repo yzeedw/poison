@@ -325,7 +325,6 @@ function Library:Window(title, size)
     AddInlineOutline(Main)
     local AccentLine = Create("Frame", { Name = "AccentLine", Size = UDim2.new(1, -2, 0, 1), Position = UDim2.new(0, 1, 0, 1), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 10, Parent = Main })
     
-    -- TitleBar updated to flex UIListLayout preventing overlaps
     local TitleBar = Create("Frame", { Name = "TitleBar", Size = UDim2.new(1, -4, 0, 24), Position = UDim2.new(0, 2, 0, 3), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ZIndex = 2, Parent = Main })
     AddInlineOutline(TitleBar)
     
@@ -358,7 +357,7 @@ function Library:Window(title, size)
     
     local TabBar = Create("Frame", { 
         Name = "TabBar", 
-        Size = UDim2.new(1, 0, 1, 0), 
+        Size = UDim2.new(1, -30, 1, 0), 
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1, 
         ZIndex = 2, 
@@ -374,10 +373,32 @@ function Library:Window(title, size)
         Parent = TabBar 
     })
     
+    local MinimizeBtn = Create("TextButton", {
+        Name = "MinimizeButton",
+        Text = "−",
+        Size = UDim2.new(0, 16, 0, 16),
+        BackgroundColor3 = Library.Theme.SectionBackground,
+        BorderSizePixel = 0,
+        TextColor3 = Library.Theme.Text,
+        TextSize = 14,
+        ZIndex = 5,
+        LayoutOrder = 999,
+        Parent = TitleBar
+    })
+    ApplyCelestiteStyle(MinimizeBtn)
+    
     local ContentArea = Create("Frame", { Name = "Content", Size = UDim2.new(1, -4, 1, -33), Position = UDim2.new(0, 2, 0, 30), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2, Parent = Main })
     AddInlineOutline(ContentArea)
     table.insert(Library.Elements.Windows, { Main = Main, TitleBar = TitleBar, Content = ContentArea, AccentLine = AccentLine })
     
+    local isMinimized = false
+    MinimizeBtn.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        ContentArea.Visible = not isMinimized
+        Main.Size = isMinimized and UDim2.new(0, size and size.X.Offset or 440, 0, 30) or (size or UDim2.new(0, 440, 0, 300))
+        MinimizeBtn.Text = isMinimized and "+" or "−"
+    end)
+
     local dragging, dragStart, startPos
     TitleBar.InputBegan:Connect(function(input) 
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
@@ -396,124 +417,9 @@ function Library:Window(title, size)
         end 
     end)
 
-    local toggleGui = Instance.new("ScreenGui")
-    toggleGui.Name = "ToggleButtonGui"
-    toggleGui.ResetOnSpawn = false
-    toggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    toggleGui.Parent = (gethui and gethui()) or CoreGui
-
-    local outerBorder = Instance.new("Frame")
-    outerBorder.Name = "OuterBorder"
-    outerBorder.Size = UDim2.new(0, 40, 0, 40)
-    outerBorder.Position = UDim2.new(0, 20, 0.5, -16)
-    outerBorder.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    outerBorder.BorderSizePixel = 1
-    outerBorder.BorderColor3 = Color3.fromRGB(5, 5, 5)
-    outerBorder.Active = true
-    outerBorder.Parent = toggleGui
-
-    local innerBorder = Instance.new("Frame")
-    innerBorder.Name = "InnerBorder"
-    innerBorder.Size = UDim2.new(1, -4, 1, -4)
-    innerBorder.Position = UDim2.new(0, 2, 0, 2)
-    innerBorder.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    innerBorder.BorderSizePixel = 1
-    innerBorder.BorderColor3 = Color3.fromRGB(10, 10, 10)
-    innerBorder.Parent = outerBorder
-
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Name = "ToggleButton"
-    toggleButton.Size = UDim2.new(1, -2, 1, -2)
-    toggleButton.Position = UDim2.new(0, 1, 0, 1)
-    toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    toggleButton.BorderSizePixel = 0
-    toggleButton.Text = "−"
-    toggleButton.TextColor3 = Color3.fromRGB(160, 160, 160)
-    toggleButton.Font = Enum.Font.SourceSans
-    toggleButton.TextSize = 18
-    toggleButton.AutoButtonColor = false
-    toggleButton.Parent = innerBorder
-
-    local topAccent = Instance.new("Frame")
-    topAccent.Name = "TopAccent"
-    topAccent.Size = UDim2.new(1, -2, 0, 2)
-    topAccent.Position = UDim2.new(0, 1, 0, 1)
-    topAccent.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    topAccent.BorderSizePixel = 0
-    topAccent.ZIndex = 3
-    topAccent.Parent = toggleButton
-
-    local uiGradient = Instance.new("UIGradient")
-    uiGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 215, 235)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 240)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 255, 225))
-    })
-    uiGradient.Parent = topAccent
-
-    toggleButton.MouseEnter:Connect(function()
-        TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
-        TweenService:Create(toggleButton, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(220, 220, 220)}):Play()
-    end)
-
-    toggleButton.MouseLeave:Connect(function()
-        TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-        TweenService:Create(toggleButton, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(160, 160, 160)}):Play()
-    end)
-
-    local tDragging, tDragInput, tDragStart, tStartPos
-    local hasDragged = false
-
-    local function updateTogglePos(input)
-        local delta = input.Position - tDragStart
-        if delta.Magnitude > 5 then
-            hasDragged = true
-        end
-        local targetPos = UDim2.new(tStartPos.X.Scale, tStartPos.X.Offset + delta.X, tStartPos.Y.Scale, tStartPos.Y.Offset + delta.Y)
-        TweenService:Create(outerBorder, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = targetPos}):Play()
-    end
-
-    toggleButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            tDragging = true
-            hasDragged = false
-            tDragStart = input.Position
-            tStartPos = outerBorder.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    tDragging = false
-                end
-            end)
-        end
-    end)
-
-    toggleButton.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            tDragInput = input
-        end
-    end)
-
-    UIS.InputChanged:Connect(function(input)
-        if input == tDragInput and tDragging then
-            updateTogglePos(input)
-        end
-    end)
-
-    local function ToggleUI()
-        ScreenGui.Enabled = not ScreenGui.Enabled
-        toggleButton.Text = ScreenGui.Enabled and "−" or "+"
-    end
-
-    toggleButton.MouseButton1Click:Connect(function()
-        if not hasDragged then
-            ToggleUI()
-        end
-    end)
-
     UIS.InputBegan:Connect(function(input, gpe)
         if not gpe and input.KeyCode == Enum.KeyCode.RightShift then
-            ToggleUI()
+            Main.Visible = not Main.Visible
         end
     end)
 
