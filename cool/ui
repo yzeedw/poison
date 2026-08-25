@@ -321,7 +321,6 @@ end
 
 function Library:Window(title, size)
     local Window = { Tabs = {} }
-    -- Resized slightly smaller than before, but larger than initial (440x300)
     local Main = Create("Frame", { Name = "CelestiteWindow", Size = size or UDim2.new(0, 440, 0, 300), Position = UDim2.new(0.5, -220, 0.5, -150), BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, Parent = ScreenGui, ClipsDescendants = false })
     AddInlineOutline(Main)
     local AccentLine = Create("Frame", { Name = "AccentLine", Size = UDim2.new(1, -2, 0, 1), Position = UDim2.new(0, 1, 0, 1), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 10, Parent = Main })
@@ -330,8 +329,8 @@ function Library:Window(title, size)
     Create("TextLabel", { Name = "Title", Text = title or "Celestite", Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = TitleBar, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
     
     local TabBar = Create("Frame", { Name = "TabBar", Size = UDim2.new(1, -85, 1, 0), Position = UDim2.new(0, 85, 0, 0), BackgroundTransparency = 1, ZIndex = 2, Parent = TitleBar })
-    Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5), Parent = TabBar })
-    Create("UIPadding", { PaddingRight = UDim.new(0, 5), Parent = TabBar })
+    Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = TabBar })
+    Create("UIPadding", { PaddingRight = UDim.new(0, 4), Parent = TabBar })
     
     local ContentArea = Create("Frame", { Name = "Content", Size = UDim2.new(1, -4, 1, -33), Position = UDim2.new(0, 2, 0, 30), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2, Parent = Main })
     AddInlineOutline(ContentArea)
@@ -478,7 +477,24 @@ function Library:Window(title, size)
 
     function Window:Tab(name)
         local Tab = {}
-        local TabButton = Create("TextButton", { Name = name, Text = name, Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.InactiveText, AutoButtonColor = false, ZIndex = 3, Parent = TabBar, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+        local TabButton = Create("TextButton", { 
+            Name = name, 
+            Text = name, 
+            Size = UDim2.new(0, 0, 1, 0), 
+            AutomaticSize = Enum.AutomaticSize.X, 
+            BackgroundTransparency = 1, 
+            FontFace = true, 
+            TextSize = Library.Config.FontSize, 
+            TextColor3 = Library.Theme.InactiveText, 
+            AutoButtonColor = false, 
+            ZIndex = 3, 
+            Parent = TabBar, 
+            TextStrokeTransparency = 0, 
+            TextStrokeColor3 = Color3.fromRGB(0,0,0) 
+        })
+        -- Compact padding to shrink text spacing across different fonts
+        Create("UIPadding", { PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 3), Parent = TabButton })
+        
         local TabAccent = Create("Frame", { Name = "Accent", Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 0.5, 7), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 4, Parent = TabButton })
         
         local TabPage = Create("ScrollingFrame", { 
@@ -868,7 +884,6 @@ function Library:Window(title, size)
                 Callback = function(fontName)
                     Library.Config.Font = fontName
                     local newFont = GetFont()
-                    -- Fully universal font propagation covering every recorded UI text instance
                     for _, textObj in pairs(Library.Elements.AllTextObjects) do
                         if textObj and textObj.Parent then
                             pcall(function()
