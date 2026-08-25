@@ -8,7 +8,7 @@ local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 
-local Library = { Config = { Font = "Proggy", FontSize = 12 } } -- Balanced default font size
+local Library = { Config = { Font = "Proggy", FontSize = 12, TabFontSize = 11 } } -- Scaled tab font size to fix Proggy text size
 
 local function Tween(obj, props, time)
     TweenService:Create(obj, TweenInfo.new(time or 0.12, Enum.EasingStyle.Quad), props):Play()
@@ -304,7 +304,7 @@ end
 local function Create(class, props, children)
     local inst = Instance.new(class)
     if class == "TextLabel" or class == "TextButton" or class == "TextBox" then
-        inst.TextSize = Library.Config.FontSize
+        inst.TextSize = props and props.TextSize or Library.Config.FontSize
         inst.FontFace = GetFont()
         table.insert(Library.Elements.AllTextObjects, inst)
     end
@@ -314,7 +314,7 @@ local function Create(class, props, children)
         elseif k == "Parent" then
         else inst[k] = v end
     end
-    if props.Parent then inst.Parent = props.Parent end
+    if props and props.Parent then inst.Parent = props.Parent end
     for _, c in pairs(children or {}) do c.Parent = inst end
     return inst
 end
@@ -477,14 +477,15 @@ function Library:Window(title, size)
 
     function Window:Tab(name)
         local Tab = {}
+        -- Fixed Tab height to avoid oversized bounds and adjusted tab font size scale
         local TabButton = Create("TextButton", { 
             Name = name, 
             Text = name, 
-            Size = UDim2.new(0, 0, 1, 0), 
+            Size = UDim2.new(0, 0, 0, 16), 
             AutomaticSize = Enum.AutomaticSize.X, 
             BackgroundTransparency = 1, 
             FontFace = true, 
-            TextSize = Library.Config.FontSize, 
+            TextSize = Library.Config.TabFontSize or 11, 
             TextColor3 = Library.Theme.InactiveText, 
             AutoButtonColor = false, 
             ZIndex = 3, 
@@ -492,10 +493,10 @@ function Library:Window(title, size)
             TextStrokeTransparency = 0, 
             TextStrokeColor3 = Color3.fromRGB(0,0,0) 
         })
-        -- Compact padding to shrink text spacing across different fonts
+        -- Compact horizontal padding for tab texts
         Create("UIPadding", { PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 3), Parent = TabButton })
         
-        local TabAccent = Create("Frame", { Name = "Accent", Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 0.5, 7), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 4, Parent = TabButton })
+        local TabAccent = Create("Frame", { Name = "Accent", Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 1, -1), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 4, Parent = TabButton })
         
         local TabPage = Create("ScrollingFrame", { 
             Name = name .. "_Page", 
@@ -531,11 +532,11 @@ function Library:Window(title, size)
             for _, t in pairs(Window.Tabs) do 
                 t.Page.Visible = false; 
                 Tween(t.Button, {TextColor3 = Library.Theme.InactiveText}); 
-                Tween(t.Accent, {Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 0.5, 7)})
+                Tween(t.Accent, {Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 1, -1)})
             end
             TabPage.Visible = true; 
             Tween(TabButton, {TextColor3 = Library.Theme.Text}); 
-            Tween(TabAccent, {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 0.5, 7)})
+            Tween(TabAccent, {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, -1)})
             UpdateCanvas()
         end
         TabButton.MouseButton1Click:Connect(Activate)
