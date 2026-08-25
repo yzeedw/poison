@@ -1,5 +1,5 @@
 --[[
-    Celestite UI Library (Fixed Tab Text & Title Overlap)
+    Celestite UI Library (Fixed Dropdown Refresh & Custom Options Issue)
 ]]
 
 local Players = game:GetService("Players")
@@ -328,7 +328,6 @@ function Library:Window(title, size)
     AddInlineOutline(TitleBar)
     Create("TextLabel", { Name = "Title", Text = title or "Celestite", Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = TitleBar, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
     
-    -- ADJUSTED: Dynamic space allocation for TabBar to avoid overlap with Title
     local TabBar = Create("Frame", { Name = "TabBar", Size = UDim2.new(1, -115, 1, 0), Position = UDim2.new(0, 115, 0, 0), BackgroundTransparency = 1, ZIndex = 2, Parent = TitleBar })
     Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), Parent = TabBar })
     Create("UIPadding", { PaddingRight = UDim.new(0, 4), Parent = TabBar })
@@ -478,7 +477,6 @@ function Library:Window(title, size)
 
     function Window:Tab(name)
         local Tab = {}
-        -- FIXED: Reduced TextSize to 10 specifically for Tab Buttons to prevent overlap and accommodate custom fonts
         local TabButton = Create("TextButton", { 
             Name = name, 
             Text = name, 
@@ -496,10 +494,8 @@ function Library:Window(title, size)
         })
         table.insert(Library.Elements.TabTextObjects, TabButton)
 
-        -- FIXED: Ultra-compact horizontal padding
         Create("UIPadding", { PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2), Parent = TabButton })
         
-        -- FIXED: Adjusted Accent position relative to reduced font size
         local TabAccent = Create("Frame", { Name = "Accent", Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 0.5, 6), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 4, Parent = TabButton })
         
         local TabPage = Create("ScrollingFrame", { 
@@ -769,14 +765,14 @@ function Library:Window(title, size)
                     val = math.floor(min + (max - min) * pct)
                     SliderFill.Size = UDim2.new(pct, 0, 1, 0)
                     Value.Text = tostring(val)
-                    opts.Callback(val) 
+                    if opts.Callback then opts.Callback(val) end
                 end
                 
                 local function Set(v) 
                     val = v
                     SliderFill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
                     Value.Text = tostring(val)
-                    opts.Callback(val) 
+                    if opts.Callback then opts.Callback(val) end
                 end
                 
                 btn.InputBegan:Connect(function(input) 
@@ -798,15 +794,20 @@ function Library:Window(title, size)
                 
                 local Obj = { Get = function() return val end, Set = Set }
                 Library.Flags[opts.Flag or opts.Name] = Obj
+                return Obj
             end
 
+            -- FIXED DROPDOWN COMPONENT
             function Section:Dropdown(opts)
-                local dropped = false; local selected = opts.Default or (opts.Options and opts.Options[1]) or "None"
+                local dropped = false; 
+                local currentOptions = opts.Options or {}
+                local selected = opts.Default or (currentOptions[1]) or "None"
+                
                 local Holder = Create("Frame", { Name = "DropdownHolder", Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
                 local Label = Create("TextLabel", { Text = opts.Name, Size = UDim2.new(1, 0, 0, 12), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local Box = Create("Frame", { Name = "DropdownBox", Size = UDim2.new(1, 0, 0, 18), Position = UDim2.new(0, 0, 0, 14), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                local ValueLabel = Create("TextLabel", { Text = selected, Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 6, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local ValueLabel = Create("TextLabel", { Text = tostring(selected), Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 6, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local Arrow = Create("TextLabel", { Text = "v", Size = UDim2.new(0, 15, 1, 0), Position = UDim2.new(1, -15, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local Button = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 9, Parent = Box })
                 
@@ -817,29 +818,34 @@ function Library:Window(title, size)
                 local OptionHolder = Create("ScrollingFrame", { Name = "Options", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 5001, Parent = DropContainer, ScrollBarThickness = 2, CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y })
                 Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = OptionHolder })
                 
-                local function UpdateList(new)
-                    if new then opts.Options = new end
-                    local options = opts.Options or {}
+                local function UpdateList(newOptions)
+                    if type(newOptions) == "table" then
+                        currentOptions = newOptions
+                    end
                     
                     OptionHolder:ClearAllChildren()
                     Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = OptionHolder })
                     
-                    if #options == 0 then
-                        Create("TextLabel", { Text = "No Configs Found", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.InactiveText, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Center })
+                    if #currentOptions == 0 then
+                        Create("TextLabel", { Text = opts.EmptyText or "No Options Found", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.InactiveText, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Center })
                     else
-                        for _, option in ipairs(options) do
+                        for _, option in ipairs(currentOptions) do
                             local optBtn = Create("TextButton", { Text = tostring(option), Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = (tostring(option) == tostring(selected)) and Library.Theme.Accent or Library.Theme.Text, BorderSizePixel = 0, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Left, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                             Create("UIPadding", { PaddingLeft = UDim.new(0, 6), Parent = optBtn })
                             optBtn.MouseButton1Click:Connect(function() 
-                                selected = option; ValueLabel.Text = tostring(option); dropped = false; DropContainer.Visible = false; Arrow.Text = "v"
+                                selected = option
+                                ValueLabel.Text = tostring(option)
+                                dropped = false
+                                DropContainer.Visible = false
+                                Arrow.Text = "v"
                                 if opts.Callback then opts.Callback(option) end
                                 UpdateList()
                             end)
                         end
                     end
                     
-                    local h = math.clamp(#options * 18, 18, 160)
-                    if #options == 0 then h = 18 end
+                    local h = math.clamp(#currentOptions * 18, 18, 160)
+                    if #currentOptions == 0 then h = 18 end
                     DropContainer.Size = UDim2.new(0, Box.AbsoluteSize.X, 0, h)
                 end
                 
@@ -863,7 +869,9 @@ function Library:Window(title, size)
                 UIS.InputBegan:Connect(function(input)
                     if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and dropped then
                         if not IsWithin(DropContainer, input) and not IsWithin(Box, input) then
-                            dropped = false; DropContainer.Visible = false; Arrow.Text = "v"
+                            dropped = false
+                            DropContainer.Visible = false
+                            Arrow.Text = "v"
                         end
                     end
                 end)
@@ -874,6 +882,7 @@ function Library:Window(title, size)
                     Refresh = function(new) UpdateList(new) end
                 }
                 Library.Flags[opts.Flag or opts.Name] = Obj
+                table.insert(Library.Elements.Dropdowns, { Box = Box, Label = Label, ValueLabel = ValueLabel, Arrow = Arrow, Container = DropContainer, Buttons = OptionHolder:GetChildren() })
                 return Obj
             end
             return Section
@@ -917,7 +926,7 @@ function Library:Window(title, size)
 
             local ConfigName = ""
             local NameBox = ConfigSection:TextBox({ Name = "Config Name", Placeholder = "...", Callback = function(v) ConfigName = v end })
-            local ConfigList = ConfigSection:Dropdown({ Name = "Saved Configs", Options = {} })
+            local ConfigList = ConfigSection:Dropdown({ Name = "Saved Configs", Options = {}, EmptyText = "No Configs Found" })
             
             local function Refresh()
                 local names = {}
@@ -1002,4 +1011,3 @@ function Library:Window(title, size)
     task.delay(0.1, function() Library:UpdateTheme() end)
     return Window
 end
-return Library
