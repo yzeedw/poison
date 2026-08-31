@@ -1,5 +1,5 @@
 --[[
-    Celestite UI Library (Fixed Dropdown Selection, Config Serialization & Tab Spacing)
+    Celestite UI Library (Fixed Dropdown Selection & Config Serialization)
 ]]
 
 local Players = game:GetService("Players")
@@ -148,7 +148,6 @@ function Library:UpdateTheme()
     for _, win in pairs(Library.Elements.Windows) do 
         win.Main.BackgroundColor3 = Library.Theme.DarkBackground; 
         win.TitleBar.BackgroundColor3 = Library.Theme.Background; 
-        if win.TabBar then win.TabBar.BackgroundColor3 = Library.Theme.Background end
         win.Content.BackgroundColor3 = Library.Theme.Background; 
         win.AccentLine.BackgroundColor3 = Library.Theme.Accent 
     end
@@ -323,19 +322,17 @@ function Library:Window(title, size)
     local Main = Create("Frame", { Name = "CelestiteWindow", Size = size or UDim2.new(0, 440, 0, 300), Position = UDim2.new(0.5, -220, 0.5, -150), BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, Parent = ScreenGui, ClipsDescendants = false })
     AddInlineOutline(Main)
     local AccentLine = Create("Frame", { Name = "AccentLine", Size = UDim2.new(1, -2, 0, 1), Position = UDim2.new(0, 1, 0, 1), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 10, Parent = Main })
-    
-    local TitleBar = Create("Frame", { Name = "TitleBar", Size = UDim2.new(1, -4, 0, 20), Position = UDim2.new(0, 2, 0, 3), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ZIndex = 2, Parent = Main })
+    local TitleBar = Create("Frame", { Name = "TitleBar", Size = UDim2.new(1, -4, 0, 24), Position = UDim2.new(0, 2, 0, 3), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ZIndex = 2, Parent = Main })
     AddInlineOutline(TitleBar)
-    Create("TextLabel", { Name = "Title", Text = title or "celery.lol", Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 3, Parent = TitleBar, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+    Create("TextLabel", { Name = "Title", Text = title or "Celestite", Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = TitleBar, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
     
-    local TabBar = Create("Frame", { Name = "TabBar", Size = UDim2.new(1, -4, 0, 22), Position = UDim2.new(0, 2, 0, 25), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ZIndex = 2, Parent = Main, ClipsDescendants = true })
-    AddInlineOutline(TabBar)
+    local TabBar = Create("Frame", { Name = "TabBar", Size = UDim2.new(1, -115, 1, 0), Position = UDim2.new(0, 115, 0, 0), BackgroundTransparency = 1, ZIndex = 2, Parent = TitleBar })
+    Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), Parent = TabBar })
+    Create("UIPadding", { PaddingRight = UDim.new(0, 4), Parent = TabBar })
     
-    local TabList = Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Left, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 0), Parent = TabBar })
-    
-    local ContentArea = Create("Frame", { Name = "Content", Size = UDim2.new(1, -4, 1, -51), Position = UDim2.new(0, 2, 0, 49), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2, Parent = Main })
+    local ContentArea = Create("Frame", { Name = "Content", Size = UDim2.new(1, -4, 1, -33), Position = UDim2.new(0, 2, 0, 30), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2, Parent = Main })
     AddInlineOutline(ContentArea)
-    table.insert(Library.Elements.Windows, { Main = Main, TitleBar = TitleBar, TabBar = TabBar, Content = ContentArea, AccentLine = AccentLine })
+    table.insert(Library.Elements.Windows, { Main = Main, TitleBar = TitleBar, Content = ContentArea, AccentLine = AccentLine })
     
     local dragging, dragStart, startPos
     TitleBar.InputBegan:Connect(function(input) 
@@ -476,45 +473,28 @@ function Library:Window(title, size)
         end
     end)
 
-    local function UpdateTabSizes()
-        local count = #Window.Tabs
-        if count == 0 then return end
-        for _, tabData in ipairs(Window.Tabs) do
-            tabData.Button.Size = UDim2.new(1 / count, 0, 1, 0)
-        end
-    end
-
     function Window:Tab(name)
         local Tab = {}
         local TabButton = Create("TextButton", { 
             Name = name, 
             Text = name, 
-            Size = UDim2.new(1, 0, 1, 0), 
+            Size = UDim2.new(0, 0, 1, 0), 
+            AutomaticSize = Enum.AutomaticSize.X, 
             BackgroundTransparency = 1, 
             FontFace = true, 
-            TextSize = Library.Config.FontSize, 
+            TextSize = 10, 
             TextColor3 = Library.Theme.InactiveText, 
-            TextXAlignment = Enum.TextXAlignment.Center,
-            TextYAlignment = Enum.TextYAlignment.Center,
             AutoButtonColor = false, 
             ZIndex = 3, 
             Parent = TabBar, 
             TextStrokeTransparency = 0, 
-            TextStrokeColor3 = Color3.fromRGB(0,0,0),
-            ClipsDescendants = true
+            TextStrokeColor3 = Color3.fromRGB(0,0,0) 
         })
         table.insert(Library.Elements.TabTextObjects, TabButton)
 
-        local TabAccent = Create("Frame", { 
-            Name = "Accent", 
-            Size = UDim2.new(1, 0, 0, 2), 
-            Position = UDim2.new(0, 0, 1, -2), 
-            BackgroundColor3 = Library.Theme.Accent, 
-            BorderSizePixel = 0, 
-            Visible = false,
-            ZIndex = 4, 
-            Parent = TabButton 
-        })
+        Create("UIPadding", { PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2), Parent = TabButton })
+        
+        local TabAccent = Create("Frame", { Name = "Accent", Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 0.5, 6), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 4, Parent = TabButton })
         
         local TabPage = Create("ScrollingFrame", { 
             Name = name .. "_Page", 
@@ -530,17 +510,17 @@ function Library:Window(title, size)
             BorderSizePixel = 0
         })
         
-        local LeftColumn = Create("Frame", { Name = "Left", Size = UDim2.new(0.5, -8, 0, 0), Position = UDim2.new(0, 5, 0, 5), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 3, Parent = TabPage, ClipsDescendants = false })
+        local LeftColumn = Create("Frame", { Name = "Left", Size = UDim2.new(0.5, -6, 0, 0), Position = UDim2.new(0, 6, 0, 6), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 3, Parent = TabPage, ClipsDescendants = false })
         local LeftList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6), Parent = LeftColumn})
         
-        local RightColumn = Create("Frame", { Name = "Right", Size = UDim2.new(0.5, -8, 0, 0), Position = UDim2.new(0.5, 3, 0, 5), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 3, Parent = TabPage, ClipsDescendants = false })
+        local RightColumn = Create("Frame", { Name = "Right", Size = UDim2.new(0.5, -6, 0, 0), Position = UDim2.new(0.5, 2, 0, 6), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 3, Parent = TabPage, ClipsDescendants = false })
         local RightList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6), Parent = RightColumn})
         
         local function UpdateCanvas()
             local leftHeight = LeftList.AbsoluteContentSize.Y
             local rightHeight = RightList.AbsoluteContentSize.Y
             local maxHeight = math.max(leftHeight, rightHeight)
-            TabPage.CanvasSize = UDim2.new(0, 0, 0, maxHeight + 15)
+            TabPage.CanvasSize = UDim2.new(0, 0, 0, maxHeight + 20)
         end
         
         LeftList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
@@ -549,27 +529,23 @@ function Library:Window(title, size)
         local function Activate() 
             for _, t in pairs(Window.Tabs) do 
                 t.Page.Visible = false; 
-                t.Accent.Visible = false;
                 Tween(t.Button, {TextColor3 = Library.Theme.InactiveText}); 
+                Tween(t.Accent, {Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 0.5, 6)})
             end
             TabPage.Visible = true; 
-            TabAccent.Visible = true;
             Tween(TabButton, {TextColor3 = Library.Theme.Text}); 
+            Tween(TabAccent, {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 0.5, 6)})
             UpdateCanvas()
         end
         TabButton.MouseButton1Click:Connect(Activate)
-        
         table.insert(Window.Tabs, {Button = TabButton, Page = TabPage, Accent = TabAccent})
         table.insert(Library.Elements.Tabs, { Accent = TabAccent, Button = TabButton, IsActive = function() return TabPage.Visible end })
-        
-        UpdateTabSizes()
-        
         if #Window.Tabs == 1 then Activate() end
 
         function Tab:Section(sectionName, side)
             local Section = {}
             local parent = (side and side:lower() == "right") and RightColumn or LeftColumn
-            local SectionFrame = Create("Frame", { Name = sectionName, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, ZIndex = 4, Parent = parent, ClipsDescendants = false })
+            local SectionFrame = Create("Frame", { Name = sectionName, Size = UDim2.new(1, -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, ZIndex = 4, Parent = parent, ClipsDescendants = false })
             AddInlineOutline(SectionFrame)
             local Header = Create("TextLabel", { Name = "Header", Text = sectionName, Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5, Parent = SectionFrame, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
             table.insert(Library.Elements.Sections, { Frame = SectionFrame, Header = Header })
