@@ -1,5 +1,6 @@
 --[[
     Celestite UI Library (Fixed Dropdown Selection & Config Serialization)
+    Customized Title & Tab Bar Layout matching Reference Design
 ]]
 
 local Players = game:GetService("Players")
@@ -133,11 +134,11 @@ end)
 Library.Theme = {
     Background = Color3.fromRGB(16, 16, 16),
     DarkBackground = Color3.fromRGB(12, 12, 12),
-    Accent = Color3.fromRGB(100, 140, 230),
+    Accent = Color3.fromRGB(45, 95, 45), -- Green bar highlight matching reference
     Inline = Color3.fromRGB(60, 60, 60),
     Outline = Color3.fromRGB(5, 5, 5),
     Text = Color3.fromRGB(255, 255, 255),
-    InactiveText = Color3.fromRGB(180, 180, 180),
+    InactiveText = Color3.fromRGB(130, 130, 130),
     SectionBackground = Color3.fromRGB(35, 35, 35)
 }
 
@@ -149,7 +150,7 @@ function Library:UpdateTheme()
         win.Main.BackgroundColor3 = Library.Theme.DarkBackground; 
         win.TitleBar.BackgroundColor3 = Library.Theme.Background; 
         win.Content.BackgroundColor3 = Library.Theme.Background; 
-        win.AccentLine.BackgroundColor3 = Library.Theme.Accent 
+        if win.AccentLine then win.AccentLine.BackgroundColor3 = Library.Theme.Accent end
     end
     for _, sec in pairs(Library.Elements.Sections) do 
         sec.Frame.BackgroundColor3 = Library.Theme.DarkBackground; 
@@ -321,18 +322,21 @@ function Library:Window(title, size)
     local Window = { Tabs = {} }
     local Main = Create("Frame", { Name = "CelestiteWindow", Size = size or UDim2.new(0, 440, 0, 300), Position = UDim2.new(0.5, -220, 0.5, -150), BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, Parent = ScreenGui, ClipsDescendants = false })
     AddInlineOutline(Main)
-    local AccentLine = Create("Frame", { Name = "AccentLine", Size = UDim2.new(1, -2, 0, 1), Position = UDim2.new(0, 1, 0, 1), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 10, Parent = Main })
-    local TitleBar = Create("Frame", { Name = "TitleBar", Size = UDim2.new(1, -4, 0, 24), Position = UDim2.new(0, 2, 0, 3), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ZIndex = 2, Parent = Main })
+    
+    -- Title Bar (Centered Title matching reference image)
+    local TitleBar = Create("Frame", { Name = "TitleBar", Size = UDim2.new(1, -4, 0, 22), Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ZIndex = 2, Parent = Main })
     AddInlineOutline(TitleBar)
-    Create("TextLabel", { Name = "Title", Text = title or "Celestite", Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = TitleBar, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+    Create("TextLabel", { Name = "Title", Text = title or "celery.lol", Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 3, Parent = TitleBar, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
     
-    local TabBar = Create("Frame", { Name = "TabBar", Size = UDim2.new(1, -115, 1, 0), Position = UDim2.new(0, 115, 0, 0), BackgroundTransparency = 1, ZIndex = 2, Parent = TitleBar })
-    Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), Parent = TabBar })
-    Create("UIPadding", { PaddingRight = UDim.new(0, 4), Parent = TabBar })
+    -- Tab Bar (Full-width row underneath TitleBar)
+    local TabBar = Create("Frame", { Name = "TabBar", Size = UDim2.new(1, -4, 0, 22), Position = UDim2.new(0, 2, 0, 24), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ZIndex = 2, Parent = Main })
+    AddInlineOutline(TabBar)
     
-    local ContentArea = Create("Frame", { Name = "Content", Size = UDim2.new(1, -4, 1, -33), Position = UDim2.new(0, 2, 0, 30), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2, Parent = Main })
+    local TabListLayout = Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 0), Parent = TabBar })
+    
+    local ContentArea = Create("Frame", { Name = "Content", Size = UDim2.new(1, -4, 1, -48), Position = UDim2.new(0, 2, 0, 46), BackgroundColor3 = Library.Theme.Background, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2, Parent = Main })
     AddInlineOutline(ContentArea)
-    table.insert(Library.Elements.Windows, { Main = Main, TitleBar = TitleBar, Content = ContentArea, AccentLine = AccentLine })
+    table.insert(Library.Elements.Windows, { Main = Main, TitleBar = TitleBar, Content = ContentArea })
     
     local dragging, dragStart, startPos
     TitleBar.InputBegan:Connect(function(input) 
@@ -473,16 +477,25 @@ function Library:Window(title, size)
         end
     end)
 
+    local function RecalculateTabWidths()
+        local count = #Window.Tabs
+        if count > 0 then
+            local widthScale = 1 / count
+            for _, tData in ipairs(Window.Tabs) do
+                tData.Button.Size = UDim2.new(widthScale, 0, 1, 0)
+            end
+        end
+    end
+
     function Window:Tab(name)
         local Tab = {}
         local TabButton = Create("TextButton", { 
             Name = name, 
-            Text = name, 
+            Text = name:lower(), 
             Size = UDim2.new(0, 0, 1, 0), 
-            AutomaticSize = Enum.AutomaticSize.X, 
             BackgroundTransparency = 1, 
             FontFace = true, 
-            TextSize = 10, 
+            TextSize = Library.Config.FontSize, 
             TextColor3 = Library.Theme.InactiveText, 
             AutoButtonColor = false, 
             ZIndex = 3, 
@@ -491,10 +504,9 @@ function Library:Window(title, size)
             TextStrokeColor3 = Color3.fromRGB(0,0,0) 
         })
         table.insert(Library.Elements.TabTextObjects, TabButton)
-
-        Create("UIPadding", { PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2), Parent = TabButton })
         
-        local TabAccent = Create("Frame", { Name = "Accent", Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 0.5, 6), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 4, Parent = TabButton })
+        -- Active underline accent sitting directly along the bottom edge
+        local TabAccent = Create("Frame", { Name = "Accent", Size = UDim2.new(1, 0, 0, 2), Position = UDim2.new(0, 0, 1, -2), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 4, Visible = false, Parent = TabButton })
         
         local TabPage = Create("ScrollingFrame", { 
             Name = name .. "_Page", 
@@ -529,17 +541,20 @@ function Library:Window(title, size)
         local function Activate() 
             for _, t in pairs(Window.Tabs) do 
                 t.Page.Visible = false; 
+                t.Accent.Visible = false;
                 Tween(t.Button, {TextColor3 = Library.Theme.InactiveText}); 
-                Tween(t.Accent, {Size = UDim2.new(0, 0, 0, 1), Position = UDim2.new(0.5, 0, 0.5, 6)})
             end
             TabPage.Visible = true; 
+            TabAccent.Visible = true;
             Tween(TabButton, {TextColor3 = Library.Theme.Text}); 
-            Tween(TabAccent, {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 0.5, 6)})
             UpdateCanvas()
         end
+        
         TabButton.MouseButton1Click:Connect(Activate)
         table.insert(Window.Tabs, {Button = TabButton, Page = TabPage, Accent = TabAccent})
         table.insert(Library.Elements.Tabs, { Accent = TabAccent, Button = TabButton, IsActive = function() return TabPage.Visible end })
+        
+        RecalculateTabWidths()
         if #Window.Tabs == 1 then Activate() end
 
         function Tab:Section(sectionName, side)
