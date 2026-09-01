@@ -138,7 +138,9 @@ UIS.InputBegan:Connect(function(input, gpe)
     end
 end)
 
-
+-- =====================================================================
+-- THEME: matches the celery.lol dark style from the reference image
+-- =====================================================================
 Library.Theme = {
     -- Main window body / content area
     Background      = Color3.fromRGB(30, 30, 30),
@@ -331,9 +333,23 @@ local function Create(class, props, children)
     return inst
 end
 
+-- =====================================================================
+-- WINDOW FUNCTION - REBUILT HEADER MATCHING REFERENCE IMAGE
+-- =====================================================================
+-- Layout (top-to-bottom):
+--   ┌─────────────────────────────────┐  <- Main frame (DarkBackground)
+--   │         celery.lol              │  <- TitleStrip 20px tall, centered text
+--   ├─────────────────────────────────┤
+--   │  aim    visuals   misc  settings│  <- TabBar 22px, evenly spaced tabs
+--   │  ━━━                            │  <- Green underline on active tab
+--   ├─────────────────────────────────┤
+--   │                                 │  <- ContentArea (scrolling columns)
+--   └─────────────────────────────────┘
+-- =====================================================================
 function Library:Window(title, size)
     local Window = { Tabs = {} }
 
+    -- ── Outer container ──────────────────────────────────────────────
     local Main = Instance.new("Frame")
     Main.Name = "CelestiteWindow"
     Main.Size = size or UDim2.new(0, 440, 0, 320)
@@ -401,6 +417,7 @@ function Library:Window(title, size)
     TabLayout.Padding = UDim.new(0, 0)
     TabLayout.Parent = TabBar
 
+    -- ── CONTENT AREA ─────────────────────────────────────────────────
     local ContentArea = Instance.new("Frame")
     ContentArea.Name = "Content"
     ContentArea.Size = UDim2.new(1, -2, 1, -45)   -- leaves room for title+tabs
@@ -447,6 +464,7 @@ function Library:Window(title, size)
         end 
     end)
 
+    -- ── TOGGLE BUTTON (hide/show) ─────────────────────────────────────
     local toggleGui = Instance.new("ScreenGui")
     toggleGui.Name = "ToggleButtonGui"
     toggleGui.ResetOnSpawn = false
@@ -537,7 +555,11 @@ function Library:Window(title, size)
         if not gpe and input.KeyCode == Enum.KeyCode.RightShift then ToggleUI() end
     end)
 
-    
+    -- ================================================================
+    -- TAB FUNCTION
+    -- Each tab button fills an equal share of the full tab bar width.
+    -- The green underline slides in at the bottom of the active tab.
+    -- ================================================================
     function Window:Tab(name)
         local Tab = {}
         local tabCount = #Window.Tabs + 1  -- will be the new count after insertion
@@ -648,7 +670,9 @@ function Library:Window(title, size)
 
         if #Window.Tabs == 1 then Activate() end
 
-        
+        -- ============================================================
+        -- SECTION function (unchanged from original)
+        -- ============================================================
         function Tab:Section(sectionName, side)
             local Section = {}
             local parent = (side and side:lower() == "right") and RightColumn or LeftColumn
