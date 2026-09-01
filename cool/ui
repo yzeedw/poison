@@ -1,15 +1,3 @@
---[[
-    Celestite UI Library (celery.lol style - matching reference image)
-    
-    Changes from original:
-    - Title bar: split into top header (dark bg, centered title) + bottom tab row
-    - Title "celery.lol" centered in top header strip
-    - Tabs span full width, evenly spaced, lowercase text
-    - Active tab has GREEN bottom underline accent (matches image)
-    - Tab bar has slightly lighter dark background than title strip
-    - No individual tab buttons styled as boxes - just text + underline
-]]
-
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -138,22 +126,14 @@ UIS.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- =====================================================================
--- THEME: matches the celery.lol dark style from the reference image
--- =====================================================================
 Library.Theme = {
-    -- Main window body / content area
     Background      = Color3.fromRGB(30, 30, 30),
-    -- Title strip top (slightly darker)
     DarkBackground  = Color3.fromRGB(22, 22, 22),
-    -- Tab row background (sits between title and content, slightly lighter)
     TabBarBackground = Color3.fromRGB(26, 26, 26),
-    -- Green underline accent (matches the image's active-tab line)
-    Accent          = Color3.fromRGB(80, 160, 80),
+    Accent          = Color3.fromRGB(0, 120, 255),
     Inline          = Color3.fromRGB(50, 50, 50),
     Outline         = Color3.fromRGB(8, 8, 8),
     Text            = Color3.fromRGB(220, 220, 220),
-    InactiveText    = Color3.fromRGB(130, 130, 130),
     SectionBackground = Color3.fromRGB(38, 38, 38)
 }
 
@@ -169,27 +149,19 @@ function Library:UpdateTheme()
     end
     for _, sec in pairs(Library.Elements.Sections) do 
         sec.Frame.BackgroundColor3 = Library.Theme.DarkBackground
-        sec.Header.TextColor3 = Library.Theme.Text
     end
     for _, tog in pairs(Library.Elements.Toggles) do 
         tog.Box.BackgroundColor3 = tog.GetState() and Library.Theme.Accent or Library.Theme.SectionBackground
-        tog.Label.TextColor3 = tog.GetState() and Library.Theme.Text or Library.Theme.InactiveText
     end
     for _, sli in pairs(Library.Elements.Sliders) do 
         sli.Fill.BackgroundColor3 = Library.Theme.Accent 
-        sli.Label.TextColor3 = Library.Theme.Text
-        sli.Value.TextColor3 = Library.Theme.Text
         if sli.Back then sli.Back.BackgroundColor3 = Library.Theme.SectionBackground end
     end
     for _, drop in pairs(Library.Elements.Dropdowns) do
         if drop.Box then drop.Box.BackgroundColor3 = Library.Theme.SectionBackground end
-        if drop.Label then drop.Label.TextColor3 = Library.Theme.Text end
-        if drop.ValueLabel then drop.ValueLabel.TextColor3 = Library.Theme.Text end
-        if drop.Arrow then drop.Arrow.TextColor3 = Library.Theme.Text end
         if drop.Container then drop.Container.BackgroundColor3 = Library.Theme.DarkBackground end
         for _, btn in pairs(drop.Buttons or {}) do 
             if btn:IsA("TextButton") then 
-                btn.TextColor3 = Library.Theme.Text 
                 btn.BackgroundColor3 = Library.Theme.DarkBackground 
             end
         end
@@ -200,20 +172,21 @@ function Library:UpdateTheme()
     end
     for _, tab in pairs(Library.Elements.Tabs) do 
         tab.Accent.BackgroundColor3 = Library.Theme.Accent 
-        Tween(tab.Button, {TextColor3 = tab.IsActive() and Library.Theme.Text or Library.Theme.InactiveText})
-    end
-    for _, lab in pairs(Library.Elements.Labels) do
-        lab.TextColor3 = Library.Theme.Text
     end
     for _, btn in pairs(Library.Elements.Buttons) do
         btn.BackgroundColor3 = Library.Theme.SectionBackground
     end
     for _, txt in pairs(Library.Elements.TextBoxes) do
         txt.Box.BackgroundColor3 = Library.Theme.SectionBackground
-        txt.Input.TextColor3 = Library.Theme.Text
     end
     for _, out in pairs(Library.Elements.Outlines) do out.Color = Library.Theme.Outline end
     for _, inl in pairs(Library.Elements.Inlines) do inl.Color = Library.Theme.Inline end
+    
+    for _, txtObj in pairs(Library.Elements.AllTextObjects) do
+        if txtObj and txtObj.Parent then
+            pcall(function() txtObj.TextColor3 = Library.Theme.Text end)
+        end
+    end
 end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -333,37 +306,19 @@ local function Create(class, props, children)
     return inst
 end
 
--- =====================================================================
--- WINDOW FUNCTION - REBUILT HEADER MATCHING REFERENCE IMAGE
--- =====================================================================
--- Layout (top-to-bottom):
---   ┌─────────────────────────────────┐  <- Main frame (DarkBackground)
---   │         celery.lol              │  <- TitleStrip 20px tall, centered text
---   ├─────────────────────────────────┤
---   │  aim    visuals   misc  settings│  <- TabBar 22px, evenly spaced tabs
---   │  ━━━                            │  <- Green underline on active tab
---   ├─────────────────────────────────┤
---   │                                 │  <- ContentArea (scrolling columns)
---   └─────────────────────────────────┘
--- =====================================================================
 function Library:Window(title, size)
     local Window = { Tabs = {} }
 
-    -- ── Outer container ──────────────────────────────────────────────
     local Main = Instance.new("Frame")
     Main.Name = "CelestiteWindow"
     Main.Size = size or UDim2.new(0, 440, 0, 320)
     Main.Position = UDim2.new(0.5, -220, 0.5, -160)
     Main.BackgroundColor3 = Library.Theme.DarkBackground
     Main.BorderSizePixel = 0
-    Main.ClipsDescendants = true  -- hard boundary: nothing inside Main can ever render outside the window.
-                                    -- (Dropdown/color-picker popups are parented directly to ScreenGui,
-                                    -- not to Main, so they are unaffected by this and still escape freely.)
+    Main.ClipsDescendants = true
     Main.Parent = ScreenGui
     AddInlineOutline(Main)
 
-    -- ── TOP STRIP: just the title, centered, ~20px tall ───────────────
-    --   Matches the "celery.lol" row in the reference image
     local TitleStrip = Instance.new("Frame")
     TitleStrip.Name = "TitleStrip"
     TitleStrip.Size = UDim2.new(1, -2, 0, 20)
@@ -389,19 +344,16 @@ function Library:Window(title, size)
     TitleLabel.Parent = TitleStrip
     table.insert(Library.Elements.AllTextObjects, TitleLabel)
 
-    -- ── TAB BAR: full-width strip below the title, ~22px tall ─────────
-    --   Tabs are evenly spread across full width, no individual boxes
     local TabBar = Instance.new("Frame")
     TabBar.Name = "TabBar"
     TabBar.Size = UDim2.new(1, -2, 0, 22)
-    TabBar.Position = UDim2.new(0, 1, 0, 21)   -- directly below TitleStrip
+    TabBar.Position = UDim2.new(0, 1, 0, 21)
     TabBar.BackgroundColor3 = Library.Theme.TabBarBackground
     TabBar.BorderSizePixel = 0
     TabBar.ZIndex = 3
-    TabBar.ClipsDescendants = true  -- prevent tab labels/underlines from spilling outside the window
+    TabBar.ClipsDescendants = true
     TabBar.Parent = Main
 
-    -- thin separator line between title strip and tab bar
     local Separator = Instance.new("Frame")
     Separator.Size = UDim2.new(1, 0, 0, 1)
     Separator.Position = UDim2.new(0, 0, 0, 0)
@@ -410,19 +362,9 @@ function Library:Window(title, size)
     Separator.ZIndex = 4
     Separator.Parent = TabBar
 
-    -- NOTE: We intentionally do NOT use a UIListLayout here.
-    -- A UIListLayout auto-positions children and can race with manually
-    -- assigned Sizes on the very first render pass (before TabBar has a
-    -- valid AbsoluteSize), which is what let tab labels drift outside
-    -- the window. Instead, RecalcTabWidths() below sets each tab
-    -- button's Size AND Position explicitly, in scale units relative to
-    -- TabBar, so every button is always mathematically confined to
-    -- TabBar's bounds regardless of when it renders.
-
-    -- ── CONTENT AREA ─────────────────────────────────────────────────
     local ContentArea = Instance.new("Frame")
     ContentArea.Name = "Content"
-    ContentArea.Size = UDim2.new(1, -2, 1, -45)   -- leaves room for title+tabs
+    ContentArea.Size = UDim2.new(1, -2, 1, -45)
     ContentArea.Position = UDim2.new(0, 1, 0, 44)
     ContentArea.BackgroundColor3 = Library.Theme.Background
     ContentArea.BorderSizePixel = 0
@@ -436,19 +378,16 @@ function Library:Window(title, size)
         TitleStrip = TitleStrip,
         TabBar = TabBar,
         Content = ContentArea,
-        -- Keep legacy keys so UpdateTheme doesn't error
         TitleBar = TitleStrip,
         AccentLine = Separator
     })
 
-    -- ── DRAG: dragging the title strip moves the window ───────────────
     local dragging, dragStart, startPos
     TitleStrip.InputBegan:Connect(function(input) 
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
             dragging = true; dragStart = input.Position; startPos = Main.Position 
         end 
     end)
-    -- Also allow dragging from tab bar (feels natural)
     TabBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true; dragStart = input.Position; startPos = Main.Position
@@ -466,7 +405,6 @@ function Library:Window(title, size)
         end 
     end)
 
-    -- ── TOGGLE BUTTON (hide/show) ─────────────────────────────────────
     local toggleGui = Instance.new("ScreenGui")
     toggleGui.Name = "ToggleButtonGui"
     toggleGui.ResetOnSpawn = false
@@ -557,24 +495,18 @@ function Library:Window(title, size)
         if not gpe and input.KeyCode == Enum.KeyCode.RightShift then ToggleUI() end
     end)
 
-    -- ================================================================
-    -- TAB FUNCTION
-    -- Each tab button fills an equal share of the full tab bar width.
-    -- The green underline slides in at the bottom of the active tab.
-    -- ================================================================
     function Window:Tab(name)
         local Tab = {}
-        local tabCount = #Window.Tabs + 1  -- will be the new count after insertion
+        local tabCount = #Window.Tabs + 1
 
-        -- We will resize all tab buttons after adding. Store ref first.
         local TabButton = Create("TextButton", {
             Name = name,
-            Text = string.lower(name),   -- lowercase like reference image
-            Size = UDim2.new(0.25, 0, 1, -1),  -- placeholder; recalc below
+            Text = string.lower(name),
+            Size = UDim2.new(0.25, 0, 1, -1),
             BackgroundTransparency = 1,
             FontFace = true,
             TextSize = Library.Config.FontSize,
-            TextColor3 = Library.Theme.InactiveText,
+            TextColor3 = Library.Theme.Text,
             AutoButtonColor = false,
             ZIndex = 4,
             Parent = TabBar,
@@ -582,21 +514,17 @@ function Library:Window(title, size)
             TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
             TextXAlignment = Enum.TextXAlignment.Center,
             TextYAlignment = Enum.TextYAlignment.Center,
-            ClipsDescendants = true,        -- clip this button's own contents to its slot
-            TextTruncate = Enum.TextTruncate.AtEnd,  -- truncate instead of overflowing
-            TextScaled = true                -- lets UITextSizeConstraint shrink long names to fit
+            ClipsDescendants = true,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            TextScaled = true
         })
 
-        -- Give a little breathing room so text doesn't touch the button edges,
-        -- which is what makes long/many tab names look like they "spill".
         Create("UIPadding", {
             PaddingLeft = UDim.new(0, 4),
             PaddingRight = UDim.new(0, 4),
             Parent = TabButton
         })
 
-        -- If a name is too long for its slot even after truncation settings,
-        -- auto-shrink the text size a little so it still reads fully when possible.
         local BaseTabTextSize = Library.Config.FontSize
         local TabSizeConstraint = Create("UITextSizeConstraint", {
             MaxTextSize = BaseTabTextSize,
@@ -604,19 +532,16 @@ function Library:Window(title, size)
             Parent = TabButton
         })
 
-        -- Green underline at the bottom of the tab button
-        -- (hidden by default, shown when tab is active)
         local TabAccent = Create("Frame", {
             Name = "Accent",
-            Size = UDim2.new(0, 0, 0, 2),           -- collapsed = inactive
-            Position = UDim2.new(0, 0, 1, -2),      -- anchored to bottom
+            Size = UDim2.new(0, 0, 0, 2),
+            Position = UDim2.new(0, 0, 1, -2),
             BackgroundColor3 = Library.Theme.Accent,
             BorderSizePixel = 0,
             ZIndex = 5,
             Parent = TabButton
         })
 
-        -- Content page for this tab
         local TabPage = Create("ScrollingFrame", {
             Name = name .. "_Page",
             Size = UDim2.new(1, 0, 1, 0),
@@ -631,7 +556,6 @@ function Library:Window(title, size)
             BorderSizePixel = 0
         })
 
-        -- Two-column layout inside the tab page
         local LeftColumn = Create("Frame", {
             Name = "Left",
             Size = UDim2.new(0.5, -6, 0, 0),
@@ -663,10 +587,6 @@ function Library:Window(title, size)
         LeftList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
         RightList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
 
-        -- Recalculate equal widths + positions for ALL tab buttons whenever a new tab is added.
-        -- Explicit scale-based Position (index/n) + Size (1/n) guarantees every button's
-        -- left and right edges stay within TabBar's own 0..1 bounds, no matter what -
-        -- there is no UIListLayout in the mix that could race or misplace things.
         local function RecalcTabWidths()
             local n = #Window.Tabs
             for i, t in ipairs(Window.Tabs) do
@@ -679,12 +599,11 @@ function Library:Window(title, size)
         local function Activate()
             for _, t in pairs(Window.Tabs) do
                 t.Page.Visible = false
-                Tween(t.Button, {TextColor3 = Library.Theme.InactiveText})
+                Tween(t.Button, {TextColor3 = Library.Theme.Text})
                 Tween(t.Accent, {Size = UDim2.new(0, 0, 0, 2), Position = UDim2.new(0, 0, 1, -2)})
             end
             TabPage.Visible = true
             Tween(TabButton, {TextColor3 = Library.Theme.Text})
-            -- Expand underline to full tab width
             Tween(TabAccent, {Size = UDim2.new(1, 0, 0, 2), Position = UDim2.new(0, 0, 1, -2)})
             UpdateCanvas()
         end
@@ -694,14 +613,10 @@ function Library:Window(title, size)
         table.insert(Window.Tabs, {Button = TabButton, Page = TabPage, Accent = TabAccent})
         table.insert(Library.Elements.Tabs, {Accent = TabAccent, Button = TabButton, IsActive = function() return TabPage.Visible end})
 
-        -- Recalculate widths now that a tab was added
         RecalcTabWidths()
 
         if #Window.Tabs == 1 then Activate() end
 
-        -- ============================================================
-        -- SECTION function (unchanged from original)
-        -- ============================================================
         function Tab:Section(sectionName, side)
             local Section = {}
             local parent = (side and side:lower() == "right") and RightColumn or LeftColumn
@@ -791,10 +706,10 @@ function Library:Window(title, size)
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
                 local Box = Create("Frame", { Size = UDim2.new(0, 12, 0, 12), Position = UDim2.new(0, 0, 0.5, -6), BackgroundColor3 = state and Library.Theme.Accent or Color3.fromRGB(50, 50, 50), BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                local Label = Create("TextLabel", { Text = opts.Name or "Toggle", Size = UDim2.new(1, -18, 1, 0), Position = UDim2.new(0, 18, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = state and Library.Theme.Text or Library.Theme.InactiveText, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Label = Create("TextLabel", { Text = opts.Name or "Toggle", Size = UDim2.new(1, -18, 1, 0), Position = UDim2.new(0, 18, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local RightSide = Create("Frame", { Size = UDim2.new(1, -18, 1, 0), Position = UDim2.new(0, 18, 0, 0), BackgroundTransparency = 1, ZIndex = 8, Parent = Holder })
                 Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = RightSide })
-                local function Set(v) state = v; Tween(Box, {BackgroundColor3 = state and Library.Theme.Accent or Color3.fromRGB(50, 50, 50)}); Tween(Label, {TextColor3 = state and Library.Theme.Text or Library.Theme.InactiveText}); if opts.Callback then opts.Callback(state) end end
+                local function Set(v) state = v; Tween(Box, {BackgroundColor3 = state and Library.Theme.Accent or Color3.fromRGB(50, 50, 50)}); Tween(Label, {TextColor3 = Library.Theme.Text}); if opts.Callback then opts.Callback(state) end end
                 local function ToggleState() state = not state; Set(state) end
                 local btn = Create("TextButton", { Size = UDim2.new(1, -60, 1, 0), BackgroundTransparency = 1, Text = "", TextTransparency = 1, ZIndex = 9, Parent = Holder })
                 btn.MouseButton1Click:Connect(ToggleState)
@@ -893,11 +808,11 @@ function Library:Window(title, size)
                     OptionHolder:ClearAllChildren(); dropElementData.Buttons = {}
                     Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = OptionHolder })
                     if #options == 0 then
-                        local emptyLabel = Create("TextLabel", { Text = "No Options Available", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.InactiveText, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Center })
+                        local emptyLabel = Create("TextLabel", { Text = "No Options Available", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Center })
                         table.insert(dropElementData.Buttons, emptyLabel)
                     else
                         for _, option in ipairs(options) do
-                            local optBtn = Create("TextButton", { Text = tostring(option), Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = (tostring(option) == tostring(selected)) and Library.Theme.Accent or Library.Theme.Text, BorderSizePixel = 0, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Left, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                            local optBtn = Create("TextButton", { Text = tostring(option), Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, BorderSizePixel = 0, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Left, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                             Create("UIPadding", { PaddingLeft = UDim.new(0, 6), Parent = optBtn })
                             optBtn.MouseButton1Click:Connect(function() selected = option; ValueLabel.Text = tostring(option); dropped = false; DropContainer.Visible = false; Arrow.Text = "v"; if opts.Callback then opts.Callback(option) end; UpdateList() end)
                             table.insert(dropElementData.Buttons, optBtn)
@@ -938,7 +853,6 @@ function Library:Window(title, size)
             ThemeSection:ColorPicker({ Name = "Background Color", Default = Library.Theme.Background, Callback = function(c) Library.Theme.Background = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Dark Background", Default = Library.Theme.DarkBackground, Callback = function(c) Library.Theme.DarkBackground = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Text Color", Default = Library.Theme.Text, Callback = function(c) Library.Theme.Text = c; Library:UpdateTheme() end })
-            ThemeSection:ColorPicker({ Name = "Inactive Text", Default = Library.Theme.InactiveText, Callback = function(c) Library.Theme.InactiveText = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Outline Color", Default = Library.Theme.Outline, Callback = function(c) Library.Theme.Outline = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Inline Color", Default = Library.Theme.Inline, Callback = function(c) Library.Theme.Inline = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Section Background", Default = Library.Theme.SectionBackground, Callback = function(c) Library.Theme.SectionBackground = c; Library:UpdateTheme() end })
