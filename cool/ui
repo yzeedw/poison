@@ -187,6 +187,12 @@ function Library:UpdateTheme()
             pcall(function() txtObj.TextColor3 = Library.Theme.Text end)
         end
     end
+
+    for _, drop in pairs(Library.Elements.Dropdowns) do
+        if drop.UpdateVisuals then
+            drop.UpdateVisuals()
+        end
+    end
 end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -801,6 +807,7 @@ function Library:Window(title, size)
                 local OptionHolder = Create("ScrollingFrame", { Name = "Options", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 5001, Parent = DropContainer, ScrollBarThickness = 2, CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y })
                 Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = OptionHolder })
                 local dropElementData = { Box = Box, Label = Label, ValueLabel = ValueLabel, Arrow = Arrow, Container = DropContainer, Buttons = {} }
+                
                 local function UpdateList(newOptions)
                     if newOptions then opts.Options = newOptions end
                     local options = opts.Options or {}
@@ -812,15 +819,42 @@ function Library:Window(title, size)
                         table.insert(dropElementData.Buttons, emptyLabel)
                     else
                         for _, option in ipairs(options) do
-                            local optBtn = Create("TextButton", { Text = tostring(option), Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, BorderSizePixel = 0, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Left, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                            local isSelected = (option == selected)
+                            local optBtn = Create("TextButton", { 
+                                Text = tostring(option), 
+                                Size = UDim2.new(1, 0, 0, 18), 
+                                BackgroundTransparency = 1, 
+                                FontFace = true, 
+                                TextSize = Library.Config.FontSize, 
+                                TextColor3 = isSelected and Library.Theme.Accent or Library.Theme.Text, 
+                                BorderSizePixel = 0, 
+                                ZIndex = 5005, 
+                                Parent = OptionHolder, 
+                                TextXAlignment = Enum.TextXAlignment.Left, 
+                                TextStrokeTransparency = 0, 
+                                TextStrokeColor3 = Color3.fromRGB(0,0,0) 
+                            })
                             Create("UIPadding", { PaddingLeft = UDim.new(0, 6), Parent = optBtn })
-                            optBtn.MouseButton1Click:Connect(function() selected = option; ValueLabel.Text = tostring(option); dropped = false; DropContainer.Visible = false; Arrow.Text = "v"; if opts.Callback then opts.Callback(option) end; UpdateList() end)
+                            optBtn.MouseButton1Click:Connect(function() 
+                                selected = option 
+                                ValueLabel.Text = tostring(option) 
+                                dropped = false 
+                                DropContainer.Visible = false 
+                                Arrow.Text = "v" 
+                                if opts.Callback then opts.Callback(option) end 
+                                UpdateList() 
+                            end)
                             table.insert(dropElementData.Buttons, optBtn)
                         end
                     end
                     local h2 = math.clamp((#options == 0 and 1 or #options) * 18, 18, 160)
                     DropContainer.Size = UDim2.new(0, Box.AbsoluteSize.X, 0, h2)
                 end
+
+                dropElementData.UpdateVisuals = function()
+                    UpdateList()
+                end
+
                 Button.MouseButton1Click:Connect(function()
                     dropped = not dropped
                     if dropped then
