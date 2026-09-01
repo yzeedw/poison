@@ -356,7 +356,9 @@ function Library:Window(title, size)
     Main.Position = UDim2.new(0.5, -220, 0.5, -160)
     Main.BackgroundColor3 = Library.Theme.DarkBackground
     Main.BorderSizePixel = 0
-    Main.ClipsDescendants = false
+    Main.ClipsDescendants = true  -- hard boundary: nothing inside Main can ever render outside the window.
+                                    -- (Dropdown/color-picker popups are parented directly to ScreenGui,
+                                    -- not to Main, so they are unaffected by this and still escape freely.)
     Main.Parent = ScreenGui
     AddInlineOutline(Main)
 
@@ -396,7 +398,7 @@ function Library:Window(title, size)
     TabBar.BackgroundColor3 = Library.Theme.TabBarBackground
     TabBar.BorderSizePixel = 0
     TabBar.ZIndex = 3
-    TabBar.ClipsDescendants = false
+    TabBar.ClipsDescendants = true  -- prevent tab labels/underlines from spilling outside the window
     TabBar.Parent = Main
 
     -- thin separator line between title strip and tab bar
@@ -408,14 +410,14 @@ function Library:Window(title, size)
     Separator.ZIndex = 4
     Separator.Parent = TabBar
 
-    -- UIListLayout: horizontal, evenly space tabs across full width
-    local TabLayout = Instance.new("UIListLayout")
-    TabLayout.FillDirection = Enum.FillDirection.Horizontal
-    TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    TabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    TabLayout.Padding = UDim.new(0, 0)
-    TabLayout.Parent = TabBar
+    -- NOTE: We intentionally do NOT use a UIListLayout here.
+    -- A UIListLayout auto-positions children and can race with manually
+    -- assigned Sizes on the very first render pass (before TabBar has a
+    -- valid AbsoluteSize), which is what let tab labels drift outside
+    -- the window. Instead, RecalcTabWidths() below sets each tab
+    -- button's Size AND Position explicitly, in scale units relative to
+    -- TabBar, so every button is always mathematically confined to
+    -- TabBar's bounds regardless of when it renders.
 
     -- ── CONTENT AREA ─────────────────────────────────────────────────
     local ContentArea = Instance.new("Frame")
@@ -577,7 +579,29 @@ function Library:Window(title, size)
             ZIndex = 4,
             Parent = TabBar,
             TextStrokeTransparency = 0,
-            TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+            TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
+            TextXAlignment = Enum.TextXAlignment.Center,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            ClipsDescendants = true,        -- clip this button's own contents to its slot
+            TextTruncate = Enum.TextTruncate.AtEnd,  -- truncate instead of overflowing
+            TextScaled = true                -- lets UITextSizeConstraint shrink long names to fit
+        })
+
+        -- Give a little breathing room so text doesn't touch the button edges,
+        -- which is what makes long/many tab names look like they "spill".
+        Create("UIPadding", {
+            PaddingLeft = UDim.new(0, 4),
+            PaddingRight = UDim.new(0, 4),
+            Parent = TabButton
+        })
+
+        -- If a name is too long for its slot even after truncation settings,
+        -- auto-shrink the text size a little so it still reads fully when possible.
+        local BaseTabTextSize = Library.Config.FontSize
+        local TabSizeConstraint = Create("UITextSizeConstraint", {
+            MaxTextSize = BaseTabTextSize,
+            MinTextSize = 7,
+            Parent = TabButton
         })
 
         -- Green underline at the bottom of the tab button
@@ -639,11 +663,16 @@ function Library:Window(title, size)
         LeftList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
         RightList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
 
-        -- Recalculate equal widths for ALL tab buttons whenever a new tab is added
+        -- Recalculate equal widths + positions for ALL tab buttons whenever a new tab is added.
+        -- Explicit scale-based Position (index/n) + Size (1/n) guarantees every button's
+        -- left and right edges stay within TabBar's own 0..1 bounds, no matter what -
+        -- there is no UIListLayout in the mix that could race or misplace things.
         local function RecalcTabWidths()
             local n = #Window.Tabs
-            for _, t in ipairs(Window.Tabs) do
-                t.Button.Size = UDim2.new(1 / n, 0, 1, -1)
+            for i, t in ipairs(Window.Tabs) do
+                local slice = 1 / n
+                t.Button.Position = UDim2.new(slice * (i - 1), 0, 0, 0)
+                t.Button.Size = UDim2.new(slice, 0, 1, -1)
             end
         end
 
