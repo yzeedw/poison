@@ -240,7 +240,7 @@ end
 
 local NotifHolder = Instance.new("Frame")
 NotifHolder.Name = "NotifHolder"
-NotifHolder.Size = UDim2.new(0, 220, 1, -40)
+NotifHolder.Size = UDim2.new(0, 250, 1, -40)
 NotifHolder.Position = UDim2.new(0, 10, 0, 10)
 NotifHolder.BackgroundTransparency = 1
 NotifHolder.Parent = ScreenGui
@@ -255,7 +255,7 @@ function Library:Notification(opts)
     local duration = opts.Duration or 5
     
     local Holder = Instance.new("Frame")
-    Holder.Size = UDim2.new(1, 0, 0, 24)
+    Holder.Size = UDim2.new(1, 0, 0, 26)
     Holder.BackgroundColor3 = Library.Theme.DarkBackground
     Holder.BorderSizePixel = 0
     Holder.Parent = NotifHolder
@@ -280,6 +280,7 @@ function Library:Notification(opts)
     TLabel.FontFace = GetFont()
     TLabel.TextSize = Library.Config.FontSize
     TLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TLabel.TextTruncate = Enum.TextTruncate.AtEnd
     TLabel.Parent = Holder
     TLabel.TextStrokeTransparency = 0
     TLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
@@ -318,8 +319,8 @@ function Library:Window(title, size)
 
     local Main = Instance.new("Frame")
     Main.Name = "CelestiteWindow"
-    Main.Size = size or UDim2.new(0, 500, 0, 340)
-    Main.Position = UDim2.new(0.5, -250, 0.5, -170)
+    Main.Size = size or UDim2.new(0, 560, 0, 370)
+    Main.Position = UDim2.new(0.5, -280, 0.5, -185)
     Main.BackgroundColor3 = Library.Theme.DarkBackground
     Main.BorderSizePixel = 0
     Main.ClipsDescendants = true
@@ -345,16 +346,16 @@ function Library:Window(title, size)
     TitleLabel.TextSize = Library.Config.FontSize
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Center
     TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
+    TitleLabel.TextTruncate = Enum.TextTruncate.AtEnd
     TitleLabel.ZIndex = 4
     TitleLabel.TextStrokeTransparency = 0
     TitleLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
     TitleLabel.Parent = TitleStrip
     table.insert(Library.Elements.AllTextObjects, TitleLabel)
 
-    -- TabBar عمودي على اليسار ومزود بـ ScrollingFrame
     local TabBar = Instance.new("ScrollingFrame")
     TabBar.Name = "TabBar"
-    TabBar.Size = UDim2.new(0, 110, 1, -22)
+    TabBar.Size = UDim2.new(0, 125, 1, -22)
     TabBar.Position = UDim2.new(0, 1, 0, 21)
     TabBar.BackgroundColor3 = Library.Theme.TabBarBackground
     TabBar.BorderSizePixel = 0
@@ -372,7 +373,7 @@ function Library:Window(title, size)
 
     local Separator = Instance.new("Frame")
     Separator.Size = UDim2.new(0, 1, 1, -21)
-    Separator.Position = UDim2.new(0, 111, 0, 21)
+    Separator.Position = UDim2.new(0, 126, 0, 21)
     Separator.BackgroundColor3 = Library.Theme.Outline
     Separator.BorderSizePixel = 0
     Separator.ZIndex = 4
@@ -380,8 +381,8 @@ function Library:Window(title, size)
 
     local ContentArea = Instance.new("Frame")
     ContentArea.Name = "Content"
-    ContentArea.Size = UDim2.new(1, -113, 1, -22)
-    ContentArea.Position = UDim2.new(0, 112, 0, 21)
+    ContentArea.Size = UDim2.new(1, -128, 1, -22)
+    ContentArea.Position = UDim2.new(0, 127, 0, 21)
     ContentArea.BackgroundColor3 = Library.Theme.Background
     ContentArea.BorderSizePixel = 0
     ContentArea.ClipsDescendants = true
@@ -511,28 +512,33 @@ function Library:Window(title, size)
 
         local TabButton = Create("TextButton", {
             Name = name,
+            Text = "",
+            Size = UDim2.new(1, 0, 0, 26),
+            BackgroundTransparency = 1,
+            AutoButtonColor = false,
+            ZIndex = 4,
+            Parent = TabBar,
+            ClipsDescendants = true
+        })
+
+        local TabText = Create("TextLabel", {
+            Name = "Title",
             Text = name,
-            Size = UDim2.new(1, 0, 0, 24),
+            Size = UDim2.new(1, -16, 1, 0),
+            Position = UDim2.new(0, 12, 0, 0),
             BackgroundTransparency = 1,
             FontFace = true,
             TextSize = Library.Config.FontSize,
             TextColor3 = Library.Theme.Text,
-            AutoButtonColor = false,
-            ZIndex = 4,
-            Parent = TabBar,
-            TextStrokeTransparency = 0,
-            TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
             TextXAlignment = Enum.TextXAlignment.Left,
             TextYAlignment = Enum.TextYAlignment.Center,
-            ClipsDescendants = true
-        })
-
-        Create("UIPadding", {
-            PaddingLeft = UDim.new(0, 10),
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            TextStrokeTransparency = 0,
+            TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
+            ZIndex = 5,
             Parent = TabButton
         })
 
-        -- الخط الأزرق العمودي التفاعلي للـ Tab النشط
         local TabAccent = Create("Frame", {
             Name = "Accent",
             Size = UDim2.new(0, 2, 1, 0),
@@ -540,11 +546,10 @@ function Library:Window(title, size)
             BackgroundColor3 = Library.Theme.Accent,
             BorderSizePixel = 0,
             Visible = false,
-            ZIndex = 5,
+            ZIndex = 6,
             Parent = TabButton
         })
 
-        -- خط فاصل بين العناصر
         Create("Frame", {
             Name = "Border",
             Size = UDim2.new(1, 0, 0, 1),
@@ -603,18 +608,18 @@ function Library:Window(title, size)
         local function Activate()
             for _, t in pairs(Window.Tabs) do
                 t.Page.Visible = false
-                Tween(t.Button, {TextColor3 = Library.Theme.Text})
+                Tween(t.Label, {TextColor3 = Library.Theme.Text})
                 t.Accent.Visible = false
             end
             TabPage.Visible = true
-            Tween(TabButton, {TextColor3 = Library.Theme.Text})
+            Tween(TabText, {TextColor3 = Library.Theme.Text})
             TabAccent.Visible = true
             UpdateCanvas()
         end
 
         TabButton.MouseButton1Click:Connect(Activate)
 
-        table.insert(Window.Tabs, {Button = TabButton, Page = TabPage, Accent = TabAccent})
+        table.insert(Window.Tabs, {Button = TabButton, Label = TabText, Page = TabPage, Accent = TabAccent})
         table.insert(Library.Elements.Tabs, {Accent = TabAccent, Button = TabButton, IsActive = function() return TabPage.Visible end})
 
         if #Window.Tabs == 1 then Activate() end
@@ -625,7 +630,6 @@ function Library:Window(title, size)
             local SectionFrame = Create("Frame", { Name = sectionName, Size = UDim2.new(1, -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, ZIndex = 4, Parent = parent, ClipsDescendants = false })
             AddInlineOutline(SectionFrame)
             
-            -- إضافة الخط الأزرق العلوي المميز لـ Celestial
             local SectionAccent = Create("Frame", {
                 Name = "SectionAccent",
                 Size = UDim2.new(1, 0, 0, 2),
@@ -636,7 +640,7 @@ function Library:Window(title, size)
                 Parent = SectionFrame
             })
 
-            local Header = Create("TextLabel", { Name = "Header", Text = sectionName, Size = UDim2.new(1, 0, 0, 18), Position = UDim2.new(0, 0, 0, 2), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5, Parent = SectionFrame, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+            local Header = Create("TextLabel", { Name = "Header", Text = sectionName, Size = UDim2.new(1, -8, 0, 18), Position = UDim2.new(0, 4, 0, 2), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5, Parent = SectionFrame, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
             table.insert(Library.Elements.Sections, { Frame = SectionFrame, Header = Header, Accent = SectionAccent })
             
             local ElementList = Create("Frame", { Name = "Elements", Size = UDim2.new(1, -12, 0, 0), Position = UDim2.new(0, 6, 0, 22), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 5, Parent = SectionFrame, ClipsDescendants = false })
@@ -644,10 +648,10 @@ function Library:Window(title, size)
             Create("UIPadding", {PaddingBottom = UDim.new(0, 8), Parent = ElementList})
             
             function Section:Button(opts)
-                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
+                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
                 local Box = Create("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                local Label = Create("TextLabel", { Text = opts.Name or "Button", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Label = Create("TextLabel", { Text = opts.Name or "Button", Size = UDim2.new(1, -10, 1, 0), Position = UDim2.new(0, 5, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 table.insert(Library.Elements.Buttons, Box)
                 local btn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 9, Parent = Box })
                 btn.MouseButton1Click:Connect(function()
@@ -660,9 +664,9 @@ function Library:Window(title, size)
             end
 
             function Section:TextBox(opts)
-                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Label = Create("TextLabel", { Text = opts.Name or "Text Box", Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local Box = Create("Frame", { Size = UDim2.new(1, 0, 0, 18), Position = UDim2.new(0, 0, 0, 14), BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
+                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
+                local Label = Create("TextLabel", { Text = opts.Name or "Text Box", Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Box = Create("Frame", { Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0, 16), BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
                 local Input = Create("TextBox", { Text = opts.Default or "", PlaceholderText = opts.Placeholder or "...", Size = UDim2.new(1, -10, 1, 0), Position = UDim2.new(0, 5, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 table.insert(Library.Elements.TextBoxes, { Box = Box, Input = Input })
@@ -677,8 +681,8 @@ function Library:Window(title, size)
                 local color = opts.Default or Color3.fromHSV(h, s, v)
                 h, s, v = Color3.toHSV(color)
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Label = Create("TextLabel", { Text = opts.Name or "Color Picker", Size = UDim2.new(1, -24, 1, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local CPHolder = Create("Frame", { Size = UDim2.new(0, 18, 0, 11), Position = UDim2.new(1, -18, 0.5, -5), BackgroundColor3 = color, ZIndex = 7, Parent = Holder })
+                local Label = Create("TextLabel", { Text = opts.Name or "Color Picker", Size = UDim2.new(1, -28, 1, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local CPHolder = Create("Frame", { Size = UDim2.new(0, 20, 0, 12), Position = UDim2.new(1, -20, 0.5, -6), BackgroundColor3 = color, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(CPHolder)
                 local CPBtn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 8, Parent = CPHolder })
                 local Picker = Create("Frame", { Size = UDim2.new(0, 150, 0, 130), BackgroundColor3 = Library.Theme.DarkBackground, Visible = false, ZIndex = 300, Parent = ScreenGui })
@@ -721,16 +725,19 @@ function Library:Window(title, size)
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
                 local Box = Create("Frame", { Size = UDim2.new(0, 12, 0, 12), Position = UDim2.new(0, 0, 0.5, -6), BackgroundColor3 = state and Library.Theme.Accent or Color3.fromRGB(50, 50, 50), BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                local Label = Create("TextLabel", { Text = opts.Name or "Toggle", Size = UDim2.new(1, -18, 1, 0), Position = UDim2.new(0, 18, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local RightSide = Create("Frame", { Size = UDim2.new(1, -18, 1, 0), Position = UDim2.new(0, 18, 0, 0), BackgroundTransparency = 1, ZIndex = 8, Parent = Holder })
+                
+                local Label = Create("TextLabel", { Text = opts.Name or "Toggle", Size = UDim2.new(1, -75, 1, 0), Position = UDim2.new(0, 18, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local RightSide = Create("Frame", { Size = UDim2.new(0, 65, 1, 0), Position = UDim2.new(1, -65, 0, 0), BackgroundTransparency = 1, ZIndex = 8, Parent = Holder })
                 Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = RightSide })
+                
                 local function Set(v) state = v; Tween(Box, {BackgroundColor3 = state and Library.Theme.Accent or Color3.fromRGB(50, 50, 50)}); Tween(Label, {TextColor3 = Library.Theme.Text}); if opts.Callback then opts.Callback(state) end end
                 local function ToggleState() state = not state; Set(state) end
-                local btn = Create("TextButton", { Size = UDim2.new(1, -60, 1, 0), BackgroundTransparency = 1, Text = "", TextTransparency = 1, ZIndex = 9, Parent = Holder })
+                local btn = Create("TextButton", { Size = UDim2.new(1, -65, 1, 0), BackgroundTransparency = 1, Text = "", TextTransparency = 1, ZIndex = 9, Parent = Holder })
                 btn.MouseButton1Click:Connect(ToggleState)
                 ToggleObj = { GetState = function() return state end, Get = function() return state end, Set = Set }
                 table.insert(Library.Elements.Toggles, { Box = Box, Label = Label, GetState = function() return state end })
                 Library.Flags[opts.Flag or opts.Name] = ToggleObj
+                
                 function ToggleObj:Keybind(kopts)
                     local bind = { Key = kopts.Default or Enum.KeyCode.X, Binding = false, Started = 0, Label = nil, OnTrigger = ToggleState, Callback = kopts.Callback }
                     local Label = Create("TextLabel", { Text = GetKeyName(bind.Key), Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 9, Parent = RightSide, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
@@ -748,6 +755,7 @@ function Library:Window(title, size)
                     end)
                     table.insert(Library.Registry, bind); return ToggleObj
                 end
+                
                 function ToggleObj:ColorPicker(copts)
                     local h, s, v = 0, 1, 1; local color = copts.Default or Color3.fromHSV(h, s, v); h, s, v = Color3.toHSV(color)
                     local CPHolder = Create("Frame", { Size = UDim2.new(0, 18, 0, 11), BackgroundColor3 = color, ZIndex = 10, Parent = RightSide }); ApplyCelestiteStyle(CPHolder)
@@ -782,10 +790,10 @@ function Library:Window(title, size)
             function Section:Slider(opts)
                 local min, max = opts.Min, opts.Max
                 local val = opts.Default or min; local sliding = false
-                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Value = Create("TextLabel", { Text = tostring(val), Size = UDim2.new(1, 0, 0, 14), Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local Label = Create("TextLabel", { Text = opts.Name or "Slider", Size = UDim2.new(1, 0, 0, 14), Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local SliderBack = Create("Frame", { Name = "SliderBack", Size = UDim2.new(1, 0, 0, 8), Position = UDim2.new(0, 0, 0, 16), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
+                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
+                local Label = Create("TextLabel", { Text = opts.Name or "Slider", Size = UDim2.new(1, -45, 0, 14), Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Value = Create("TextLabel", { Text = tostring(val), Size = UDim2.new(0, 40, 0, 14), Position = UDim2.new(1, -40, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local SliderBack = Create("Frame", { Name = "SliderBack", Size = UDim2.new(1, 0, 0, 8), Position = UDim2.new(0, 0, 0, 18), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 AddInlineOutline(SliderBack)
                 local SliderFill = Create("Frame", { Name = "Fill", Size = UDim2.new((val - min) / (max - min), 0, 1, 0), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 8, Parent = SliderBack })
                 table.insert(Library.Elements.Sliders, { Fill = SliderFill, Label = Label, Value = Value, Back = SliderBack })
@@ -803,11 +811,11 @@ function Library:Window(title, size)
                 local dropped = false
                 opts.Options = opts.Options or {}
                 local selected = opts.Default or (opts.Options[1] or "None")
-                local Holder = Create("Frame", { Name = "DropdownHolder", Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Label = Create("TextLabel", { Text = opts.Name, Size = UDim2.new(1, 0, 0, 12), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local Box = Create("Frame", { Name = "DropdownBox", Size = UDim2.new(1, 0, 0, 18), Position = UDim2.new(0, 0, 0, 14), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
+                local Holder = Create("Frame", { Name = "DropdownHolder", Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
+                local Label = Create("TextLabel", { Text = opts.Name, Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Box = Create("Frame", { Name = "DropdownBox", Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0, 16), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                local ValueLabel = Create("TextLabel", { Text = tostring(selected), Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 6, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local ValueLabel = Create("TextLabel", { Text = tostring(selected), Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 6, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local Arrow = Create("TextLabel", { Text = "v", Size = UDim2.new(0, 15, 1, 0), Position = UDim2.new(1, -15, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local Button = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 9, Parent = Box })
                 local DropContainer = Create("Frame", { Name = "DropContainer", BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, Visible = false, ZIndex = 5000, Parent = ScreenGui, ClipsDescendants = true })
@@ -840,6 +848,7 @@ function Library:Window(title, size)
                                 ZIndex = 5005, 
                                 Parent = OptionHolder, 
                                 TextXAlignment = Enum.TextXAlignment.Left, 
+                                TextTruncate = Enum.TextTruncate.AtEnd,
                                 TextStrokeTransparency = 0, 
                                 TextStrokeColor3 = Color3.fromRGB(0,0,0) 
                             })
@@ -870,7 +879,7 @@ function Library:Window(title, size)
                         if opts.OnOpen then opts.OnOpen() end
                         UpdateList()
                         task.defer(function()
-                            DropContainer.Position = UDim2.new(0, Box.AbsolutePosition.X, 0, Box.AbsolutePosition.Y + 18)
+                            DropContainer.Position = UDim2.new(0, Box.AbsolutePosition.X, 0, Box.AbsolutePosition.Y + 20)
                             DropContainer.Size = UDim2.new(0, Box.AbsoluteSize.X, 0, DropContainer.Size.Y.Offset)
                             DropContainer.Visible = true; Arrow.Text = "^"
                         end)
@@ -923,7 +932,7 @@ function Library:Window(title, size)
                 for k, v in pairs(Library.Flags) do
                     local val = nil
                     if type(v) == "table" then if v.Get then val = v.Get() elseif v.GetState then val = v.GetState() elseif v.GetText then val = v.GetText() end end
-                    if typeof(val) == "Color3" then val = {val.R * 255, val.G * 255, val.B * 255} end
+                    if typeof(val) == "Color3" then val = {val.R * 255, v.G * 255, v.B * 255} end
                     if val ~= nil then data.Flags[k] = val end
                 end
                 local success, err = pcall(function() writefile(ConfigPath .. saveTarget .. ".json", HttpService:JSONEncode(data)) end)
