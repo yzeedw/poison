@@ -316,9 +316,9 @@ end
 
 function Library:Window(title, size, toggleOpts)
     toggleOpts = toggleOpts or {}
-    local currentMethod = toggleOpts.Method or toggleOpts.Mode or "Default"
-    local currentImage = toggleOpts.Image or ""
-    local initialToggleSize = toggleOpts.Size or UDim2.new(0, 36, 0, 36)
+    local currentMethod = toggleOpts.Method or toggleOpts.Mode or "Custom"
+    local currentImage = toggleOpts.Image or "10639756312"
+    local initialToggleSize = toggleOpts.Size or UDim2.new(0, 45, 0, 45)
     if type(initialToggleSize) == "number" then
         initialToggleSize = UDim2.new(0, initialToggleSize, 0, initialToggleSize)
     end
@@ -977,8 +977,8 @@ function Library:Window(title, size, toggleOpts)
 
             -- Integrated Toggle Hide/Show UI Customization Section
             local ToggleSection = Tab:Section("Toggle UI Customization", side or "Right")
-            local customIconId = currentImage or ""
-            local selectedMethod = currentMethod or "Default"
+            local customIconId = currentImage or "10639756312"
+            local selectedMethod = currentMethod or "Custom"
 
             ToggleSection:Dropdown({
                 Name = "Toggle Mode",
@@ -993,7 +993,7 @@ function Library:Window(title, size, toggleOpts)
             ToggleSection:TextBox({
                 Name = "Custom Image Asset ID",
                 Default = customIconId,
-                Placeholder = "10709791437...",
+                Placeholder = "10639756312...",
                 Callback = function(v)
                     customIconId = v
                     if selectedMethod == "Custom" then
@@ -1009,6 +1009,13 @@ function Library:Window(title, size, toggleOpts)
                 Default = outerBorder.Size.X.Offset,
                 Callback = function(val)
                     Window:SetToggleSize(val)
+                end
+            })
+
+            ToggleSection:Button({
+                Name = "Hide / Show Window",
+                Callback = function()
+                    ToggleUI()
                 end
             })
 
