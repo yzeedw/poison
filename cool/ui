@@ -314,7 +314,15 @@ local function Create(class, props, children)
     return inst
 end
 
-function Library:Window(title, size)
+function Library:Window(title, size, toggleOpts)
+    toggleOpts = toggleOpts or {}
+    local currentMethod = toggleOpts.Method or toggleOpts.Mode or "Default"
+    local currentImage = toggleOpts.Image or ""
+    local initialToggleSize = toggleOpts.Size or UDim2.new(0, 36, 0, 36)
+    if type(initialToggleSize) == "number" then
+        initialToggleSize = UDim2.new(0, initialToggleSize, 0, initialToggleSize)
+    end
+
     local Window = { Tabs = {} }
 
     local Main = Instance.new("Frame")
@@ -417,6 +425,7 @@ function Library:Window(title, size)
         end 
     end)
 
+    -- Hide / Show Toggle GUI
     local toggleGui = Instance.new("ScreenGui")
     toggleGui.Name = "ToggleButtonGui"
     toggleGui.ResetOnSpawn = false
@@ -425,7 +434,7 @@ function Library:Window(title, size)
 
     local outerBorder = Instance.new("Frame")
     outerBorder.Name = "OuterBorder"
-    outerBorder.Size = UDim2.new(0, 36, 0, 36)
+    outerBorder.Size = initialToggleSize
     outerBorder.Position = UDim2.new(0, 20, 0.5, -16)
     outerBorder.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     outerBorder.BorderSizePixel = 1
@@ -460,6 +469,7 @@ function Library:Window(title, size)
     topAccent.BorderSizePixel = 0
     topAccent.ZIndex = 3
     topAccent.Parent = toggleButton
+
     local uiGradient = Instance.new("UIGradient")
     uiGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 215, 235)),
@@ -468,13 +478,66 @@ function Library:Window(title, size)
     })
     uiGradient.Parent = topAccent
 
+    local customIcon = Instance.new("ImageLabel")
+    customIcon.Name = "CustomIcon"
+    customIcon.Size = UDim2.new(1, -6, 1, -6)
+    customIcon.Position = UDim2.new(0, 3, 0, 3)
+    customIcon.BackgroundTransparency = 1
+    customIcon.ScaleType = Enum.ScaleType.Fit
+    customIcon.ZIndex = 4
+    customIcon.Visible = false
+    customIcon.Parent = toggleButton
+
+    local function FormatAssetId(id)
+        id = tostring(id or "")
+        if id:match("^%d+$") then
+            return "rbxassetid://" .. id
+        end
+        return id
+    end
+
+    local function ApplyToggleMethod(method, imageId)
+        currentMethod = method or currentMethod
+        if imageId then currentImage = imageId end
+
+        if currentMethod:lower() == "custom" then
+            toggleButton.Text = ""
+            topAccent.Visible = false
+            customIcon.Visible = true
+            customIcon.Image = FormatAssetId(currentImage)
+        else
+            currentMethod = "Default"
+            toggleButton.Text = ScreenGui.Enabled and "−" or "+"
+            topAccent.Visible = true
+            customIcon.Visible = false
+        end
+    end
+
+    function Window:SetToggleSize(size)
+        if typeof(size) == "UDim2" then
+            outerBorder.Size = size
+        elseif type(size) == "number" then
+            outerBorder.Size = UDim2.new(0, size, 0, size)
+        end
+    end
+
+    function Window:SetToggleMethod(method, imageId)
+        ApplyToggleMethod(method, imageId)
+    end
+
+    ApplyToggleMethod(currentMethod, currentImage)
+
     toggleButton.MouseEnter:Connect(function()
         TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
-        TweenService:Create(toggleButton, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(220, 220, 220)}):Play()
+        if currentMethod == "Default" then
+            TweenService:Create(toggleButton, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(220, 220, 220)}):Play()
+        end
     end)
     toggleButton.MouseLeave:Connect(function()
         TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-        TweenService:Create(toggleButton, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(160, 160, 160)}):Play()
+        if currentMethod == "Default" then
+            TweenService:Create(toggleButton, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(160, 160, 160)}):Play()
+        end
     end)
 
     local tDragging, tDragInput, tDragStart, tStartPos, hasDragged = false, nil, nil, nil, false
@@ -500,7 +563,9 @@ function Library:Window(title, size)
 
     local function ToggleUI()
         ScreenGui.Enabled = not ScreenGui.Enabled
-        toggleButton.Text = ScreenGui.Enabled and "−" or "+"
+        if currentMethod == "Default" then
+            toggleButton.Text = ScreenGui.Enabled and "−" or "+"
+        end
     end
     toggleButton.MouseButton1Click:Connect(function() if not hasDragged then ToggleUI() end end)
     UIS.InputBegan:Connect(function(input, gpe)
@@ -577,30 +642,30 @@ function Library:Window(title, size)
         local LeftColumn = Create("Frame", {
             Name = "Left",
             Size = UDim2.new(0.5, -6, 0, 0),
-            Position = UDim2.new(0, 6, 0, 6),
+            Position = UDim2.new(0, 4, 0, 4),
             BackgroundTransparency = 1,
             AutomaticSize = Enum.AutomaticSize.Y,
             ZIndex = 3,
             Parent = TabPage,
             ClipsDescendants = false
         })
-        local LeftList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6), Parent = LeftColumn})
+        local LeftList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), Parent = LeftColumn})
 
         local RightColumn = Create("Frame", {
             Name = "Right",
             Size = UDim2.new(0.5, -6, 0, 0),
-            Position = UDim2.new(0.5, 2, 0, 6),
+            Position = UDim2.new(0.5, 2, 0, 4),
             BackgroundTransparency = 1,
             AutomaticSize = Enum.AutomaticSize.Y,
             ZIndex = 3,
             Parent = TabPage,
             ClipsDescendants = false
         })
-        local RightList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6), Parent = RightColumn})
+        local RightList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), Parent = RightColumn})
 
         local function UpdateCanvas()
             local maxH = math.max(LeftList.AbsoluteContentSize.Y, RightList.AbsoluteContentSize.Y)
-            TabPage.CanvasSize = UDim2.new(0, 0, 0, maxH + 20)
+            TabPage.CanvasSize = UDim2.new(0, 0, 0, maxH + 12)
         end
         LeftList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
         RightList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
@@ -627,7 +692,8 @@ function Library:Window(title, size)
         function Tab:Section(sectionName, side)
             local Section = {}
             local parent = (side and side:lower() == "right") and RightColumn or LeftColumn
-            local SectionFrame = Create("Frame", { Name = sectionName, Size = UDim2.new(1, -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, ZIndex = 4, Parent = parent, ClipsDescendants = false })
+            
+            local SectionFrame = Create("Frame", { Name = sectionName, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, ZIndex = 4, Parent = parent, ClipsDescendants = false })
             AddInlineOutline(SectionFrame)
             
             local SectionAccent = Create("Frame", {
@@ -643,9 +709,9 @@ function Library:Window(title, size)
             local Header = Create("TextLabel", { Name = "Header", Text = sectionName, Size = UDim2.new(1, -8, 0, 18), Position = UDim2.new(0, 4, 0, 2), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.None, ZIndex = 5, Parent = SectionFrame, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
             table.insert(Library.Elements.Sections, { Frame = SectionFrame, Header = Header, Accent = SectionAccent })
             
-            local ElementList = Create("Frame", { Name = "Elements", Size = UDim2.new(1, -12, 0, 0), Position = UDim2.new(0, 6, 0, 22), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 5, Parent = SectionFrame, ClipsDescendants = false })
-            Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6), Parent = ElementList})
-            Create("UIPadding", {PaddingBottom = UDim.new(0, 8), Parent = ElementList})
+            local ElementList = Create("Frame", { Name = "Elements", Size = UDim2.new(1, -10, 0, 0), Position = UDim2.new(0, 5, 0, 20), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 5, Parent = SectionFrame, ClipsDescendants = false })
+            Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = ElementList})
+            Create("UIPadding", {PaddingBottom = UDim.new(0, 6), Parent = ElementList})
             
             function Section:Button(opts)
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
@@ -908,6 +974,44 @@ function Library:Window(title, size)
             ThemeSection:ColorPicker({ Name = "Outline Color", Default = Library.Theme.Outline, Callback = function(c) Library.Theme.Outline = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Inline Color", Default = Library.Theme.Inline, Callback = function(c) Library.Theme.Inline = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Section Background", Default = Library.Theme.SectionBackground, Callback = function(c) Library.Theme.SectionBackground = c; Library:UpdateTheme() end })
+
+            -- Integrated Toggle Hide/Show UI Customization Section
+            local ToggleSection = Tab:Section("Toggle UI Customization", side or "Right")
+            local customIconId = currentImage or ""
+            local selectedMethod = currentMethod or "Default"
+
+            ToggleSection:Dropdown({
+                Name = "Toggle Mode",
+                Default = selectedMethod,
+                Options = {"Default", "Custom"},
+                Callback = function(method)
+                    selectedMethod = method
+                    Window:SetToggleMethod(selectedMethod, customIconId)
+                end
+            })
+
+            ToggleSection:TextBox({
+                Name = "Custom Image Asset ID",
+                Default = customIconId,
+                Placeholder = "10709791437...",
+                Callback = function(v)
+                    customIconId = v
+                    if selectedMethod == "Custom" then
+                        Window:SetToggleMethod("Custom", customIconId)
+                    end
+                end
+            })
+
+            ToggleSection:Slider({
+                Name = "Toggle Button Size",
+                Min = 20,
+                Max = 80,
+                Default = outerBorder.Size.X.Offset,
+                Callback = function(val)
+                    Window:SetToggleSize(val)
+                end
+            })
+
             return ThemeSection
         end
 
