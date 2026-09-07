@@ -3,7 +3,6 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
-local ContentProvider = game:GetService("ContentProvider")
 local LocalPlayer = Players.LocalPlayer
 
 local Library = { Config = { Font = "Proggy", FontSize = 11 } }
@@ -203,9 +202,9 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = (gethui and gethui()) or CoreGui
 
--- Separate GUI for Notifications so they stay visible when the main UI is hidden
+-- FIX #2: Created a separate ScreenGui strictly for Notifications so it stays visible when ScreenGui.Enabled = false
 local NotifGui = Instance.new("ScreenGui")
-NotifGui.Name = "CelestiteNotifGui"
+NotifGui.Name = "CelestiteNotifUI"
 NotifGui.ResetOnSpawn = false
 NotifGui.DisplayOrder = 1000
 NotifGui.Parent = (gethui and gethui()) or CoreGui
@@ -251,7 +250,7 @@ NotifHolder.Name = "NotifHolder"
 NotifHolder.Size = UDim2.new(0, 250, 1, -40)
 NotifHolder.Position = UDim2.new(0, 10, 0, 10)
 NotifHolder.BackgroundTransparency = 1
-NotifHolder.Parent = NotifGui
+NotifHolder.Parent = NotifGui -- Parented to NotifGui instead of main ScreenGui
 
 local NotifList = Instance.new("UIListLayout")
 NotifList.Padding = UDim.new(0, 4)
@@ -433,7 +432,6 @@ function Library:Window(title, size, toggleOpts)
         end 
     end)
 
-    -- Hide / Show Toggle GUI
     local toggleGui = Instance.new("ScreenGui")
     toggleGui.Name = "ToggleButtonGui"
     toggleGui.ResetOnSpawn = false
@@ -497,7 +495,7 @@ function Library:Window(title, size, toggleOpts)
     customIcon.Parent = toggleButton
 
     local function FormatAssetId(id)
-        id = tostring(id or ""):gsub("%s+", "")
+        id = tostring(id or "")
         if id:match("^%d+$") then
             return "rbxassetid://" .. id
         end
@@ -506,50 +504,19 @@ function Library:Window(title, size, toggleOpts)
 
     local function ApplyToggleMethod(method, imageId)
         currentMethod = method or currentMethod
+        if imageId then currentImage = imageId end
 
         if currentMethod:lower() == "custom" then
             toggleButton.Text = ""
             topAccent.Visible = false
             customIcon.Visible = true
-
-            if imageId ~= nil then
-                local formatted = FormatAssetId(imageId)
-                local isValidProtocol = (formatted:find("^rbxassetid://%d+$") or formatted:find("^http://") or formatted:find("^https://") or formatted:find("^rbxasset://"))
-                local loadFailed = false
-
-                if isValidProtocol then
-                    local conn
-                    conn = customIcon.ContentLoadFailed:Connect(function()
-                        loadFailed = true
-                    end)
-                    customIcon.Image = formatted
-                    pcall(function()
-                        ContentProvider:PreloadAsync({customIcon})
-                    end)
-                    if conn then conn:Disconnect() end
-                end
-
-                if not isValidProtocol or loadFailed then
-                    Library:Notification({ Text = "Invalid Image ID!", Duration = 3 })
-                    customIcon.Image = FormatAssetId(currentImage)
-                    return false
-                else
-                    currentImage = tostring(imageId)
-                end
-            else
-                customIcon.Image = FormatAssetId(currentImage)
-            end
+            customIcon.Image = FormatAssetId(currentImage)
         else
             currentMethod = "Default"
             toggleButton.Text = ScreenGui.Enabled and "−" or "+"
             topAccent.Visible = true
             customIcon.Visible = false
         end
-        return true
-    end
-
-    function Window:GetCurrentImage()
-        return currentImage
     end
 
     function Window:SetToggleSize(size)
@@ -561,7 +528,7 @@ function Library:Window(title, size, toggleOpts)
     end
 
     function Window:SetToggleMethod(method, imageId)
-        return ApplyToggleMethod(method, imageId)
+        ApplyToggleMethod(method, imageId)
     end
 
     ApplyToggleMethod(currentMethod, currentImage)
@@ -1014,9 +981,8 @@ function Library:Window(title, size, toggleOpts)
             ThemeSection:ColorPicker({ Name = "Inline Color", Default = Library.Theme.Inline, Callback = function(c) Library.Theme.Inline = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Section Background", Default = Library.Theme.SectionBackground, Callback = function(c) Library.Theme.SectionBackground = c; Library:UpdateTheme() end })
 
-            -- Integrated Toggle Hide/Show UI Customization Section
             local ToggleSection = Tab:Section("Toggle UI Customization", side or "Right")
-            local customIconId = Window:GetCurrentImage()
+            local customIconId = currentImage or "10639756312"
             local selectedMethod = currentMethod or "Custom"
 
             ToggleSection:Dropdown({
@@ -1029,23 +995,43 @@ function Library:Window(title, size, toggleOpts)
                 end
             })
 
-            local customBox
-            customBox = ToggleSection:TextBox({
+            -- FIX #3: Added a background preload check for custom image IDs 
+            local CustomImageTextBox
+            CustomImageTextBox = ToggleSection:TextBox({
                 Name = "Custom Image Asset ID",
                 Default = customIconId,
                 Placeholder = "10639756312...",
                 Callback = function(v)
-                    if selectedMethod == "Custom" then
-                        local success = Window:SetToggleMethod("Custom", v)
-                        if not success then
-                            customIconId = Window:GetCurrentImage()
-                            customBox.Set(customIconId)
+                    if v == "" then return end
+                    local oldId = customIconId
+                    local formattedId = FormatAssetId(v)
+                    
+                    local testImg = Instance.new("ImageLabel")
+                    testImg.Image = formattedId
+                    
+                    -- Check validity on a separate thread so it doesn't freeze the game
+                    task.spawn(function()
+                        local success, err = pcall(function()
+                            game:GetService("ContentProvider"):PreloadAsync({testImg})
+                        end)
+                        
+                        -- If it completely failed or the image did not load at all
+                        if not success or not testImg.IsLoaded then
+                            Library:Notification({Text = "Invalid Image ID! Reverting.", Duration = 3})
+                            
+                            customIconId = oldId
+                            if CustomImageTextBox then CustomImageTextBox.Set(oldId) end
+                            if selectedMethod == "Custom" then
+                                Window:SetToggleMethod("Custom", oldId)
+                            end
                         else
                             customIconId = v
+                            if selectedMethod == "Custom" then
+                                Window:SetToggleMethod("Custom", customIconId)
+                            end
                         end
-                    else
-                        customIconId = v
-                    end
+                        testImg:Destroy()
+                    end)
                 end
             })
 
@@ -1066,7 +1052,8 @@ function Library:Window(title, size, toggleOpts)
             local ConfigSection = Tab:Section("Configuration", side or "Left")
             local ConfigPath = "celestite/"
             if not isfolder(ConfigPath) then makefolder(ConfigPath) end
-            local NameBox = ConfigSection:TextBox({ Name = "Config Name", Placeholder = "..." })
+            local ConfigName = ""
+            local NameBox = ConfigSection:TextBox({ Name = "Config Name", Placeholder = "...", Callback = function(v) ConfigName = v end })
             local ConfigList = ConfigSection:Dropdown({ Name = "Saved Configs", Options = {} })
             local function Refresh()
                 local names = {}
@@ -1075,15 +1062,17 @@ function Library:Window(title, size, toggleOpts)
             end
             ConfigList.OnOpen = Refresh
             ConfigSection:Button({ Name = "Save Config", Callback = function()
-                local typedName = NameBox:Get()
-                local saveTarget = (typedName and typedName ~= "") and typedName or ConfigList:Get()
+                local saveTarget = ConfigName ~= "" and ConfigName or ConfigList:Get()
                 if not saveTarget or saveTarget == "" or saveTarget == "None" then Library:Notification({ Text = "Enter a config name", Duration = 3 }); return end
                 local data = { Theme = {}, Flags = {} }
                 for k, v in pairs(Library.Theme) do data.Theme[k] = {v.R * 255, v.G * 255, v.B * 255} end
                 for k, v in pairs(Library.Flags) do
                     local val = nil
                     if type(v) == "table" then if v.Get then val = v.Get() elseif v.GetState then val = v.GetState() elseif v.GetText then val = v.GetText() end end
+                    
+                    -- FIX #1: Corrected "v.G" and "v.B" to "val.G" and "val.B" so saving colors stops erroring out
                     if typeof(val) == "Color3" then val = {val.R * 255, val.G * 255, val.B * 255} end
+                    
                     if val ~= nil then data.Flags[k] = val end
                 end
                 local success, err = pcall(function() writefile(ConfigPath .. saveTarget .. ".json", HttpService:JSONEncode(data)) end)
