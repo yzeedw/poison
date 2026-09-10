@@ -200,7 +200,6 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = (gethui and gethui()) or CoreGui
 
--- FIX #2: Created a separate ScreenGui strictly for Notifications so it stays visible when ScreenGui.Enabled = false
 local NotifGui = Instance.new("ScreenGui")
 NotifGui.Name = "CelestiteNotifUI"
 NotifGui.ResetOnSpawn = false
@@ -248,7 +247,7 @@ NotifHolder.Name = "NotifHolder"
 NotifHolder.Size = UDim2.new(0, 250, 1, -40)
 NotifHolder.Position = UDim2.new(0, 10, 0, 10)
 NotifHolder.BackgroundTransparency = 1
-NotifHolder.Parent = NotifGui -- Parented to NotifGui instead of main ScreenGui
+NotifHolder.Parent = NotifGui
 
 local NotifList = Instance.new("UIListLayout")
 NotifList.Padding = UDim.new(0, 4)
@@ -750,6 +749,7 @@ function Library:Window(title, size, toggleOpts)
                 local h, s, v = 0, 1, 1
                 local color = opts.Default or Color3.fromHSV(h, s, v)
                 h, s, v = Color3.toHSV(color)
+                
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
                 local Label = Create("TextLabel", { Text = opts.Name or "Color Picker", Size = UDim2.new(1, -28, 1, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local CPHolder = Create("Frame", { Size = UDim2.new(0, 20, 0, 12), Position = UDim2.new(1, -20, 0.5, -6), BackgroundColor3 = color, ZIndex = 7, Parent = Holder })
@@ -757,11 +757,13 @@ function Library:Window(title, size, toggleOpts)
                 local CPBtn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 8, Parent = CPHolder })
                 local Picker = Create("Frame", { Size = UDim2.new(0, 150, 0, 130), BackgroundColor3 = Library.Theme.DarkBackground, Visible = false, ZIndex = 300, Parent = ScreenGui })
                 AddInlineOutline(Picker)
+                
                 local HueSlider = Create("Frame", { Size = UDim2.new(0, 10, 0, 110), Position = UDim2.new(1, -18, 0, 10), ZIndex = 301, Parent = Picker, Active = true })
                 ApplyCelestiteStyle(HueSlider)
                 local HueBtn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 305, Parent = HueSlider })
                 Create("UIGradient", { Rotation = 90, Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)), ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)), ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 0, 255)), ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))}), Parent = HueSlider })
                 local HueMarker = Create("Frame", { Size = UDim2.new(1, 4, 0, 2), Position = UDim2.new(0, -2, h, 0), BackgroundColor3 = Color3.new(1,1,1), ZIndex = 302, Parent = HueSlider })
+                
                 local SVBox = Create("Frame", { Size = UDim2.new(0, 110, 0, 110), Position = UDim2.new(0, 10, 0, 10), BackgroundColor3 = Color3.fromHSV(h, 1, 1), ZIndex = 301, Parent = Picker, Active = true })
                 ApplyCelestiteStyle(SVBox)
                 local SVBtn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 305, Parent = SVBox })
@@ -771,22 +773,105 @@ function Library:Window(title, size, toggleOpts)
                 Create("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(0,0,0)), Transparency = NumberSequence.new(1, 0), Parent = ValGradient })
                 local Marker = Create("Frame", { Size = UDim2.new(0, 4, 0, 4), Position = UDim2.new(s, -2, 1-v, -2), BackgroundColor3 = Color3.new(1,1,1), ZIndex = 304, Parent = SVBox })
                 Create("UIStroke", { Color = Color3.new(0,0,0), Thickness = 1, Parent = Marker })
-                local sS, sH = false, false; local pickerConn, renderConn
-                local function UpdatePos() local pos = CPHolder.AbsolutePosition; Picker.Position = UDim2.new(0, pos.X + 24, 0, pos.Y) end
-                local function ClosePicker() Picker.Visible = false; if pickerConn then pickerConn:Disconnect(); pickerConn = nil end; if renderConn then renderConn:Disconnect(); renderConn = nil end end
-                CPBtn.MouseButton1Click:Connect(function() if Picker.Visible then ClosePicker() else UpdatePos(); Picker.Visible = true; renderConn = game:GetService("RunService").RenderStepped:Connect(UpdatePos); pickerConn = UIS.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then if not IsWithin(Picker, input) and not IsWithin(CPHolder, input) then ClosePicker() end end end) end end)
-                local function Set(color) h, s, v = color:ToHSV(); CPHolder.BackgroundColor3 = color; SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1); Marker.Position = UDim2.new(s, -2, 1-v, -2); HueMarker.Position = UDim2.new(0, -2, h, 0); if opts.Callback then opts.Callback(color) end end
+                
+                local sS, sH = false, false
+                local pickerConn, dragConn, endConn
+                
+                local function UpdatePos()
+                    local pos = CPHolder.AbsolutePosition
+                    Picker.Position = UDim2.new(0, pos.X + 24, 0, pos.Y)
+                end
+                
+                local function TrackInput(input)
+                    if sS then
+                        local relX = math.clamp((input.Position.X - SVBox.AbsolutePosition.X) / SVBox.AbsoluteSize.X, 0, 1)
+                        local relY = math.clamp((input.Position.Y - SVBox.AbsolutePosition.Y) / SVBox.AbsoluteSize.Y, 0, 1)
+                        s, v = relX, 1 - relY
+                        Marker.Position = UDim2.new(s, -2, 1-v, -2)
+                        local fc = Color3.fromHSV(h, s, v)
+                        CPHolder.BackgroundColor3 = fc
+                        if opts.Callback then opts.Callback(fc) end
+                    elseif sH then
+                        h = math.clamp((input.Position.Y - HueSlider.AbsolutePosition.Y) / HueSlider.AbsoluteSize.Y, 0, 1)
+                        HueMarker.Position = UDim2.new(0, -2, h, 0)
+                        SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                        local fc = Color3.fromHSV(h, s, v)
+                        CPHolder.BackgroundColor3 = fc
+                        if opts.Callback then opts.Callback(fc) end
+                    end
+                end
+
+                local function StopDragging()
+                    sS, sH = false, false
+                    if dragConn then dragConn:Disconnect(); dragConn = nil end
+                    if endConn then endConn:Disconnect(); endConn = nil end
+                end
+
+                local function StartDragging(isSatVal, input)
+                    if isSatVal then sS = true else sH = true end
+                    TrackInput(input)
+                    if not dragConn then
+                        dragConn = UIS.InputChanged:Connect(function(i)
+                            if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then
+                                TrackInput(i)
+                            end
+                        end)
+                    end
+                    if not endConn then
+                        endConn = UIS.InputEnded:Connect(function(i)
+                            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                                StopDragging()
+                            end
+                        end)
+                    end
+                end
+
+                local function ClosePicker()
+                    Picker.Visible = false
+                    StopDragging()
+                    if pickerConn then pickerConn:Disconnect(); pickerConn = nil end
+                end
+
+                CPBtn.MouseButton1Click:Connect(function()
+                    if Picker.Visible then
+                        ClosePicker()
+                    else
+                        UpdatePos()
+                        Picker.Visible = true
+                        pickerConn = UIS.InputBegan:Connect(function(input)
+                            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                                if not IsWithin(Picker, input) and not IsWithin(CPHolder, input) then
+                                    ClosePicker()
+                                end
+                            end
+                        end)
+                    end
+                end)
+
+                SVBtn.InputBegan:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                        StartDragging(true, i)
+                    end
+                end)
+
+                HueBtn.InputBegan:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                        StartDragging(false, i)
+                    end
+                end)
+
+                local function Set(color)
+                    h, s, v = color:ToHSV()
+                    CPHolder.BackgroundColor3 = color
+                    SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                    Marker.Position = UDim2.new(s, -2, 1-v, -2)
+                    HueMarker.Position = UDim2.new(0, -2, h, 0)
+                    if opts.Callback then opts.Callback(color) end
+                end
+
                 local CPObj = { Set = Set, Get = function() return Color3.fromHSV(h, s, v) end }
                 Library.Flags[opts.Flag or opts.Name] = CPObj
                 table.insert(Library.Elements.ColorPickers, { Frame = Holder, Picker = Picker })
-                local function TrackInput(input)
-                    if sS then local relX = math.clamp((input.Position.X - SVBox.AbsolutePosition.X) / SVBox.AbsoluteSize.X, 0, 1); local relY = math.clamp((input.Position.Y - SVBox.AbsolutePosition.Y) / SVBox.AbsoluteSize.Y, 0, 1); s, v = relX, 1 - relY; Marker.Position = UDim2.new(s, -2, 1-v, -2); local fc = Color3.fromHSV(h, s, v); if opts.Callback then opts.Callback(fc) end; CPHolder.BackgroundColor3 = fc
-                    elseif sH then h = math.clamp((input.Position.Y - HueSlider.AbsolutePosition.Y) / HueSlider.AbsoluteSize.Y, 0, 1); HueMarker.Position = UDim2.new(0, -2, h, 0); SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1); local fc = Color3.fromHSV(h, s, v); if opts.Callback then opts.Callback(fc) end; CPHolder.BackgroundColor3 = fc end
-                end
-                SVBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sS = true; TrackInput(i) end end)
-                HueBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sH = true; TrackInput(i) end end)
-                UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sS = false; sH = false end end)
-                UIS.InputChanged:Connect(function(i) if (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then TrackInput(i) end end)
                 return CPObj
             end
 
@@ -831,27 +916,89 @@ function Library:Window(title, size, toggleOpts)
                     local CPHolder = Create("Frame", { Size = UDim2.new(0, 18, 0, 11), BackgroundColor3 = color, ZIndex = 10, Parent = RightSide }); ApplyCelestiteStyle(CPHolder)
                     local CPBtn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 11, Parent = CPHolder })
                     local Picker = Create("Frame", { Size = UDim2.new(0, 150, 0, 130), BackgroundColor3 = Library.Theme.DarkBackground, Visible = false, ZIndex = 3000, Parent = ScreenGui }); AddInlineOutline(Picker)
-                    local HueSlider = Create("Frame", { Size = UDim2.new(0, 10, 0, 110), Position = UDim2.new(1, -18, 0, 10), ZIndex = 3001, Parent = Picker }); ApplyCelestiteStyle(HueSlider)
+                    local HueSlider = Create("Frame", { Size = UDim2.new(0, 10, 0, 110), Position = UDim2.new(1, -18, 0, 10), ZIndex = 3001, Parent = Picker, Active = true }); ApplyCelestiteStyle(HueSlider)
+                    local HueBtn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 3005, Parent = HueSlider })
                     Create("UIGradient", { Rotation = 90, Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)), ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)), ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 0, 255)), ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))}), Parent = HueSlider })
                     local HueMarker = Create("Frame", { Size = UDim2.new(1, 4, 0, 2), Position = UDim2.new(0, -2, h, 0), BackgroundColor3 = Color3.new(1,1,1), ZIndex = 3002, Parent = HueSlider })
-                    local SVBox = Create("Frame", { Size = UDim2.new(0, 110, 0, 110), Position = UDim2.new(0, 10, 0, 10), BackgroundColor3 = Color3.fromHSV(h, 1, 1), ZIndex = 3001, Parent = Picker }); ApplyCelestiteStyle(SVBox)
+                    local SVBox = Create("Frame", { Size = UDim2.new(0, 110, 0, 110), Position = UDim2.new(0, 10, 0, 10), BackgroundColor3 = Color3.fromHSV(h, 1, 1), ZIndex = 3001, Parent = Picker, Active = true }); ApplyCelestiteStyle(SVBox)
+                    local SVBtn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 3005, Parent = SVBox })
                     local SatGradient = Create("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.new(1,1,1), ZIndex = 3002, Parent = SVBox }); Create("UIGradient", { Color = ColorSequence.new(Color3.new(1,1,1)), Transparency = NumberSequence.new(0, 1), Parent = SatGradient })
                     local ValGradient = Create("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.new(0,0,0), ZIndex = 3003, Parent = SVBox }); Create("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(0,0,0)), Transparency = NumberSequence.new(1, 0), Parent = ValGradient })
                     local Marker = Create("Frame", { Size = UDim2.new(0, 4, 0, 4), Position = UDim2.new(s, -2, 1-v, -2), BackgroundColor3 = Color3.new(1,1,1), ZIndex = 3004, Parent = SVBox }); Create("UIStroke", { Color = Color3.new(0,0,0), Thickness = 1, Parent = Marker })
-                    local pickerConn, renderConn
-                    local function UpdatePos() local pos = CPHolder.AbsolutePosition; Picker.Position = UDim2.new(0, pos.X + 24, 0, pos.Y) end
-                    local function ClosePicker() Picker.Visible = false; if pickerConn then pickerConn:Disconnect(); pickerConn = nil end; if renderConn then renderConn:Disconnect(); renderConn = nil end end
-                    CPBtn.MouseButton1Click:Connect(function() if Picker.Visible then ClosePicker() else UpdatePos(); Picker.Visible = true; renderConn = game:GetService("RunService").RenderStepped:Connect(UpdatePos); pickerConn = UIS.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then if not IsWithin(Picker, input) and not IsWithin(CPHolder, input) then ClosePicker() end end end) end end)
+                    
+                    local pickerConn, dragConn, endConn
                     local sS, sH = false, false
-                    local function Update() color = Color3.fromHSV(h, s, v); CPHolder.BackgroundColor3 = color; SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1); copts.Callback(color) end
-                    local function TrackInput(input)
-                        if sS then local relX = math.clamp((input.Position.X - SVBox.AbsolutePosition.X) / SVBox.AbsoluteSize.X, 0, 1); local relY = math.clamp((input.Position.Y - SVBox.AbsolutePosition.Y) / SVBox.AbsoluteSize.Y, 0, 1); s, v = relX, 1 - relY; Marker.Position = UDim2.new(s, -2, 1-v, -2); Update()
-                        elseif sH then h = math.clamp((input.Position.Y - HueSlider.AbsolutePosition.Y) / HueSlider.AbsoluteSize.Y, 0, 1); HueMarker.Position = UDim2.new(0, -2, h, 0); SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1); Update() end
+                    local function UpdatePos() local pos = CPHolder.AbsolutePosition; Picker.Position = UDim2.new(0, pos.X + 24, 0, pos.Y) end
+                    
+                    local function Update()
+                        color = Color3.fromHSV(h, s, v)
+                        CPHolder.BackgroundColor3 = color
+                        SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                        if copts.Callback then copts.Callback(color) end
                     end
-                    SVBox.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sS = true; TrackInput(i) end end)
-                    HueSlider.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sH = true; TrackInput(i) end end)
-                    UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sS = false; sH = false end end)
-                    UIS.InputChanged:Connect(function(i) if (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then TrackInput(i) end end)
+                    
+                    local function TrackInput(input)
+                        if sS then
+                            local relX = math.clamp((input.Position.X - SVBox.AbsolutePosition.X) / SVBox.AbsoluteSize.X, 0, 1)
+                            local relY = math.clamp((input.Position.Y - SVBox.AbsolutePosition.Y) / SVBox.AbsoluteSize.Y, 0, 1)
+                            s, v = relX, 1 - relY
+                            Marker.Position = UDim2.new(s, -2, 1-v, -2)
+                            Update()
+                        elseif sH then
+                            h = math.clamp((input.Position.Y - HueSlider.AbsolutePosition.Y) / HueSlider.AbsoluteSize.Y, 0, 1)
+                            HueMarker.Position = UDim2.new(0, -2, h, 0)
+                            SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                            Update()
+                        end
+                    end
+
+                    local function StopDragging()
+                        sS, sH = false, false
+                        if dragConn then dragConn:Disconnect(); dragConn = nil end
+                        if endConn then endConn:Disconnect(); endConn = nil end
+                    end
+
+                    local function StartDragging(isSatVal, input)
+                        if isSatVal then sS = true else sH = true end
+                        TrackInput(input)
+                        if not dragConn then
+                            dragConn = UIS.InputChanged:Connect(function(i)
+                                if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then
+                                    TrackInput(i)
+                                end
+                            end)
+                        end
+                        if not endConn then
+                            endConn = UIS.InputEnded:Connect(function(i)
+                                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                                    StopDragging()
+                                end
+                            end)
+                        end
+                    end
+
+                    local function ClosePicker()
+                        Picker.Visible = false
+                        StopDragging()
+                        if pickerConn then pickerConn:Disconnect(); pickerConn = nil end
+                    end
+
+                    CPBtn.MouseButton1Click:Connect(function()
+                        if Picker.Visible then
+                            ClosePicker()
+                        else
+                            UpdatePos()
+                            Picker.Visible = true
+                            pickerConn = UIS.InputBegan:Connect(function(input)
+                                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                                    if not IsWithin(Picker, input) and not IsWithin(CPHolder, input) then ClosePicker() end
+                                end
+                            end)
+                        end
+                    end)
+
+                    SVBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then StartDragging(true, i) end end)
+                    HueBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then StartDragging(false, i) end end)
                     return ToggleObj
                 end
                 return ToggleObj
@@ -970,14 +1117,26 @@ function Library:Window(title, size, toggleOpts)
         
         function Tab:Themes(side)
             local ThemeSection = Tab:Section("Theme & Font Settings", side or "Right")
+            
+            local themeScheduled = false
+            local function RequestThemeUpdate()
+                if not themeScheduled then
+                    themeScheduled = true
+                    task.defer(function()
+                        Library:UpdateTheme()
+                        themeScheduled = false
+                    end)
+                end
+            end
+
             ThemeSection:Dropdown({ Name = "Font Style", Default = Library.Config.Font, Options = FontNames, Callback = function(fontName) Library.Config.Font = fontName; local newFont = GetFont(); for _, textObj in pairs(Library.Elements.AllTextObjects) do if textObj and textObj.Parent then pcall(function() textObj.FontFace = newFont end) end end end })
-            ThemeSection:ColorPicker({ Name = "Accent Color", Default = Library.Theme.Accent, Callback = function(c) Library.Theme.Accent = c; Library:UpdateTheme() end })
-            ThemeSection:ColorPicker({ Name = "Background Color", Default = Library.Theme.Background, Callback = function(c) Library.Theme.Background = c; Library:UpdateTheme() end })
-            ThemeSection:ColorPicker({ Name = "Dark Background", Default = Library.Theme.DarkBackground, Callback = function(c) Library.Theme.DarkBackground = c; Library:UpdateTheme() end })
-            ThemeSection:ColorPicker({ Name = "Text Color", Default = Library.Theme.Text, Callback = function(c) Library.Theme.Text = c; Library:UpdateTheme() end })
-            ThemeSection:ColorPicker({ Name = "Outline Color", Default = Library.Theme.Outline, Callback = function(c) Library.Theme.Outline = c; Library:UpdateTheme() end })
-            ThemeSection:ColorPicker({ Name = "Inline Color", Default = Library.Theme.Inline, Callback = function(c) Library.Theme.Inline = c; Library:UpdateTheme() end })
-            ThemeSection:ColorPicker({ Name = "Section Background", Default = Library.Theme.SectionBackground, Callback = function(c) Library.Theme.SectionBackground = c; Library:UpdateTheme() end })
+            ThemeSection:ColorPicker({ Name = "Accent Color", Default = Library.Theme.Accent, Callback = function(c) Library.Theme.Accent = c; RequestThemeUpdate() end })
+            ThemeSection:ColorPicker({ Name = "Background Color", Default = Library.Theme.Background, Callback = function(c) Library.Theme.Background = c; RequestThemeUpdate() end })
+            ThemeSection:ColorPicker({ Name = "Dark Background", Default = Library.Theme.DarkBackground, Callback = function(c) Library.Theme.DarkBackground = c; RequestThemeUpdate() end })
+            ThemeSection:ColorPicker({ Name = "Text Color", Default = Library.Theme.Text, Callback = function(c) Library.Theme.Text = c; RequestThemeUpdate() end })
+            ThemeSection:ColorPicker({ Name = "Outline Color", Default = Library.Theme.Outline, Callback = function(c) Library.Theme.Outline = c; RequestThemeUpdate() end })
+            ThemeSection:ColorPicker({ Name = "Inline Color", Default = Library.Theme.Inline, Callback = function(c) Library.Theme.Inline = c; RequestThemeUpdate() end })
+            ThemeSection:ColorPicker({ Name = "Section Background", Default = Library.Theme.SectionBackground, Callback = function(c) Library.Theme.SectionBackground = c; RequestThemeUpdate() end })
 
             local ToggleSection = Tab:Section("Toggle UI Customization", side or "Right")
             local customIconId = currentImage or "10639756312"
@@ -993,7 +1152,6 @@ function Library:Window(title, size, toggleOpts)
                 end
             })
 
-            -- FIX #3: Added a background preload check for custom image IDs 
             local CustomImageTextBox
             CustomImageTextBox = ToggleSection:TextBox({
                 Name = "Custom Image Asset ID",
@@ -1007,13 +1165,11 @@ function Library:Window(title, size, toggleOpts)
                     local testImg = Instance.new("ImageLabel")
                     testImg.Image = formattedId
                     
-                    -- Check validity on a separate thread so it doesn't freeze the game
                     task.spawn(function()
                         local success, err = pcall(function()
                             game:GetService("ContentProvider"):PreloadAsync({testImg})
                         end)
                         
-                        -- If it completely failed or the image did not load at all
                         if not success or not testImg.IsLoaded then
                             Library:Notification({Text = "Invalid Image ID! Reverting.", Duration = 3})
                             
@@ -1068,7 +1224,6 @@ function Library:Window(title, size, toggleOpts)
                     local val = nil
                     if type(v) == "table" then if v.Get then val = v.Get() elseif v.GetState then val = v.GetState() elseif v.GetText then val = v.GetText() end end
                     
-                    -- FIX #1: Corrected "v.G" and "v.B" to "val.G" and "val.B" so saving colors stops erroring out
                     if typeof(val) == "Color3" then val = {val.R * 255, val.G * 255, val.B * 255} end
                     
                     if val ~= nil then data.Flags[k] = val end
