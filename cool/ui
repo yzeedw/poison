@@ -1,9 +1,9 @@
-local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
-local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
 
 local Library = { Config = { Font = "Proggy", FontSize = 11 } }
 
@@ -129,8 +129,8 @@ end)
 Library.Theme = {
     Background      = Color3.fromRGB(30, 30, 30),
     DarkBackground  = Color3.fromRGB(22, 22, 22),
-    TabBarBackground = Color3.fromRGB(24, 24, 24),
-    Accent          = Color3.fromRGB(0, 120, 255),
+    TabBarBackground = Color3.fromRGB(18, 18, 20),
+    Accent          = Color3.fromRGB(90, 110, 225),
     Inline          = Color3.fromRGB(50, 50, 50),
     Outline         = Color3.fromRGB(8, 8, 8),
     Text            = Color3.fromRGB(220, 220, 220),
@@ -146,6 +146,7 @@ function Library:UpdateTheme()
         win.TitleStrip.BackgroundColor3 = Library.Theme.DarkBackground
         win.TabBar.BackgroundColor3 = Library.Theme.TabBarBackground
         win.Content.BackgroundColor3 = Library.Theme.Background
+        if win.TitleLine then win.TitleLine.BackgroundColor3 = Library.Theme.Accent end
     end
     for _, sec in pairs(Library.Elements.Sections) do 
         sec.Frame.BackgroundColor3 = Library.Theme.DarkBackground
@@ -173,6 +174,7 @@ function Library:UpdateTheme()
     end
     for _, tab in pairs(Library.Elements.Tabs) do 
         tab.Accent.BackgroundColor3 = Library.Theme.Accent 
+        if tab.Box then tab.Box.BackgroundColor3 = Library.Theme.Accent end
     end
     for _, btn in pairs(Library.Elements.Buttons) do
         btn.BackgroundColor3 = Library.Theme.SectionBackground
@@ -202,7 +204,6 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = (gethui and gethui()) or CoreGui
 
--- FIX #2: Created a separate ScreenGui strictly for Notifications so it stays visible when ScreenGui.Enabled = false
 local NotifGui = Instance.new("ScreenGui")
 NotifGui.Name = "CelestiteNotifUI"
 NotifGui.ResetOnSpawn = false
@@ -250,7 +251,7 @@ NotifHolder.Name = "NotifHolder"
 NotifHolder.Size = UDim2.new(0, 250, 1, -40)
 NotifHolder.Position = UDim2.new(0, 10, 0, 10)
 NotifHolder.BackgroundTransparency = 1
-NotifHolder.Parent = NotifGui -- Parented to NotifGui instead of main ScreenGui
+NotifHolder.Parent = NotifGui
 
 local NotifList = Instance.new("UIListLayout")
 NotifList.Padding = UDim.new(0, 4)
@@ -342,10 +343,46 @@ function Library:Window(title, size, toggleOpts)
     Main.Parent = ScreenGui
     AddInlineOutline(Main)
 
+    -- CUSTOM CURSOR (Bounded inside UI)
+    local CURSOR = Instance.new("ImageLabel")
+    CURSOR.Name = "UICursor"
+    CURSOR.Size = UDim2.new(0, 18, 0, 18)
+    CURSOR.BackgroundTransparency = 1
+    CURSOR.ImageColor3 = Library.Theme.Accent
+    CURSOR.Image = "rbxassetid://17404277477"
+    CURSOR.ZIndex = 1000
+    CURSOR.Parent = ScreenGui
+
+    RunService.RenderStepped:Connect(function()
+        if not ScreenGui.Enabled then
+            CURSOR.Visible = false
+            return
+        end
+
+        local mousePos = UIS:GetMouseLocation() - GuiService:GetGuiInset()
+        local minX = Main.AbsolutePosition.X
+        local minY = Main.AbsolutePosition.Y
+        local maxX = minX + Main.AbsoluteSize.X - CURSOR.AbsoluteSize.X
+        local maxY = minY + Main.AbsoluteSize.Y - CURSOR.AbsoluteSize.Y
+
+        local isInside = mousePos.X >= minX and mousePos.X <= minX + Main.AbsoluteSize.X
+                     and mousePos.Y >= minY and mousePos.Y <= minY + Main.AbsoluteSize.Y
+
+        if isInside then
+            local clampedX = math.clamp(mousePos.X - 6, minX, maxX)
+            local clampedY = math.clamp(mousePos.Y - 2, minY, maxY)
+            CURSOR.Position = UDim2.new(0, clampedX, 0, clampedY)
+            CURSOR.Visible = true
+        else
+            CURSOR.Visible = false
+        end
+    end)
+
+    -- TITLE BAR MATCHING IMAGE
     local TitleStrip = Instance.new("Frame")
     TitleStrip.Name = "TitleStrip"
-    TitleStrip.Size = UDim2.new(1, -2, 0, 20)
-    TitleStrip.Position = UDim2.new(0, 1, 0, 1)
+    TitleStrip.Size = UDim2.new(1, 0, 0, 22)
+    TitleStrip.Position = UDim2.new(0, 0, 0, 0)
     TitleStrip.BackgroundColor3 = Library.Theme.DarkBackground
     TitleStrip.BorderSizePixel = 0
     TitleStrip.ZIndex = 3
@@ -353,13 +390,14 @@ function Library:Window(title, size, toggleOpts)
 
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.Name = "Title"
-    TitleLabel.Text = title or "celestial.lol"
-    TitleLabel.Size = UDim2.new(1, 0, 1, 0)
+    TitleLabel.Text = title or "odyssey [v1.0] | developed by source.lua"
+    TitleLabel.Size = UDim2.new(1, -12, 1, 0)
+    TitleLabel.Position = UDim2.new(0, 8, 0, 0)
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.TextColor3 = Library.Theme.Text
     TitleLabel.FontFace = GetFont()
     TitleLabel.TextSize = Library.Config.FontSize
-    TitleLabel.TextXAlignment = Enum.TextXAlignment.Center
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
     TitleLabel.TextTruncate = Enum.TextTruncate.None
     TitleLabel.ZIndex = 4
@@ -368,10 +406,19 @@ function Library:Window(title, size, toggleOpts)
     TitleLabel.Parent = TitleStrip
     table.insert(Library.Elements.AllTextObjects, TitleLabel)
 
+    local TitleLine = Instance.new("Frame")
+    TitleLine.Name = "TitleLine"
+    TitleLine.Size = UDim2.new(1, 0, 0, 1)
+    TitleLine.Position = UDim2.new(0, 0, 1, -1)
+    TitleLine.BackgroundColor3 = Library.Theme.Accent
+    TitleLine.BorderSizePixel = 0
+    TitleLine.ZIndex = 5
+    TitleLine.Parent = TitleStrip
+
     local TabBar = Instance.new("ScrollingFrame")
     TabBar.Name = "TabBar"
-    TabBar.Size = UDim2.new(0, 110, 1, -22)
-    TabBar.Position = UDim2.new(0, 1, 0, 21)
+    TabBar.Size = UDim2.new(0, 110, 1, -23)
+    TabBar.Position = UDim2.new(0, 1, 0, 23)
     TabBar.BackgroundColor3 = Library.Theme.TabBarBackground
     TabBar.BorderSizePixel = 0
     TabBar.ZIndex = 3
@@ -383,12 +430,12 @@ function Library:Window(title, size, toggleOpts)
 
     local TabList = Instance.new("UIListLayout")
     TabList.SortOrder = Enum.SortOrder.LayoutOrder
-    TabList.Padding = UDim.new(0, 0)
+    TabList.Padding = UDim.new(0, 2)
     TabList.Parent = TabBar
 
     local Separator = Instance.new("Frame")
-    Separator.Size = UDim2.new(0, 1, 1, -21)
-    Separator.Position = UDim2.new(0, 111, 0, 21)
+    Separator.Size = UDim2.new(0, 1, 1, -23)
+    Separator.Position = UDim2.new(0, 111, 0, 23)
     Separator.BackgroundColor3 = Library.Theme.Outline
     Separator.BorderSizePixel = 0
     Separator.ZIndex = 4
@@ -396,8 +443,8 @@ function Library:Window(title, size, toggleOpts)
 
     local ContentArea = Instance.new("Frame")
     ContentArea.Name = "Content"
-    ContentArea.Size = UDim2.new(1, -113, 1, -22)
-    ContentArea.Position = UDim2.new(0, 112, 0, 21)
+    ContentArea.Size = UDim2.new(1, -113, 1, -23)
+    ContentArea.Position = UDim2.new(0, 112, 0, 23)
     ContentArea.BackgroundColor3 = Library.Theme.Background
     ContentArea.BorderSizePixel = 0
     ContentArea.ClipsDescendants = true
@@ -411,6 +458,7 @@ function Library:Window(title, size, toggleOpts)
         TabBar = TabBar,
         Content = ContentArea,
         TitleBar = TitleStrip,
+        TitleLine = TitleLine,
         AccentLine = Separator
     })
 
@@ -584,7 +632,7 @@ function Library:Window(title, size, toggleOpts)
         local TabButton = Create("TextButton", {
             Name = name,
             Text = "",
-            Size = UDim2.new(1, 0, 0, 24),
+            Size = UDim2.new(1, 0, 0, 22),
             BackgroundTransparency = 1,
             AutoButtonColor = false,
             ZIndex = 4,
@@ -592,28 +640,23 @@ function Library:Window(title, size, toggleOpts)
             ClipsDescendants = true
         })
 
-        local TabText = Create("TextLabel", {
-            Name = "Title",
-            Text = name,
-            Size = UDim2.new(1, -16, 1, 0),
-            Position = UDim2.new(0, 12, 0, 0),
-            BackgroundTransparency = 1,
-            FontFace = true,
-            TextSize = Library.Config.FontSize,
-            TextColor3 = Library.Theme.Text,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Center,
-            TextTruncate = Enum.TextTruncate.None,
-            TextStrokeTransparency = 0,
-            TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
-            ZIndex = 5,
+        -- TAB VISUALS MATCHING IMAGE (Active highlight box + left accent bar)
+        local TabBg = Create("Frame", {
+            Name = "TabBg",
+            Size = UDim2.new(1, -8, 1, -2),
+            Position = UDim2.new(0, 4, 0, 1),
+            BackgroundColor3 = Library.Theme.Accent,
+            BackgroundTransparency = 0.82,
+            BorderSizePixel = 0,
+            Visible = false,
+            ZIndex = 4,
             Parent = TabButton
         })
 
         local TabAccent = Create("Frame", {
             Name = "Accent",
-            Size = UDim2.new(0, 2, 1, 0),
-            Position = UDim2.new(0, 0, 0, 0),
+            Size = UDim2.new(0, 2, 1, -6),
+            Position = UDim2.new(0, 6, 0, 3),
             BackgroundColor3 = Library.Theme.Accent,
             BorderSizePixel = 0,
             Visible = false,
@@ -621,13 +664,21 @@ function Library:Window(title, size, toggleOpts)
             Parent = TabButton
         })
 
-        Create("Frame", {
-            Name = "Border",
-            Size = UDim2.new(1, 0, 0, 1),
-            Position = UDim2.new(0, 0, 1, -1),
-            BackgroundColor3 = Library.Theme.Outline,
-            BorderSizePixel = 0,
-            ZIndex = 4,
+        local TabText = Create("TextLabel", {
+            Name = "Title",
+            Text = name,
+            Size = UDim2.new(1, -20, 1, 0),
+            Position = UDim2.new(0, 14, 0, 0),
+            BackgroundTransparency = 1,
+            FontFace = true,
+            TextSize = Library.Config.FontSize,
+            TextColor3 = Color3.fromRGB(140, 140, 150),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            TextTruncate = Enum.TextTruncate.None,
+            TextStrokeTransparency = 0,
+            TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
+            ZIndex = 5,
             Parent = TabButton
         })
 
@@ -679,19 +730,21 @@ function Library:Window(title, size, toggleOpts)
         local function Activate()
             for _, t in pairs(Window.Tabs) do
                 t.Page.Visible = false
-                Tween(t.Label, {TextColor3 = Library.Theme.Text})
+                t.Label.TextColor3 = Color3.fromRGB(140, 140, 150)
                 t.Accent.Visible = false
+                if t.Box then t.Box.Visible = false end
             end
             TabPage.Visible = true
-            Tween(TabText, {TextColor3 = Library.Theme.Text})
+            TabText.TextColor3 = Library.Theme.Text
             TabAccent.Visible = true
+            TabBg.Visible = true
             UpdateCanvas()
         end
 
         TabButton.MouseButton1Click:Connect(Activate)
 
-        table.insert(Window.Tabs, {Button = TabButton, Label = TabText, Page = TabPage, Accent = TabAccent})
-        table.insert(Library.Elements.Tabs, {Accent = TabAccent, Button = TabButton, IsActive = function() return TabPage.Visible end})
+        table.insert(Window.Tabs, {Button = TabButton, Label = TabText, Page = TabPage, Accent = TabAccent, Box = TabBg})
+        table.insert(Library.Elements.Tabs, {Accent = TabAccent, Box = TabBg, Button = TabButton, IsActive = function() return TabPage.Visible end})
 
         if #Window.Tabs == 1 then Activate() end
 
@@ -995,7 +1048,6 @@ function Library:Window(title, size, toggleOpts)
                 end
             })
 
-            -- FIX #3: Added a background preload check for custom image IDs 
             local CustomImageTextBox
             CustomImageTextBox = ToggleSection:TextBox({
                 Name = "Custom Image Asset ID",
@@ -1009,13 +1061,11 @@ function Library:Window(title, size, toggleOpts)
                     local testImg = Instance.new("ImageLabel")
                     testImg.Image = formattedId
                     
-                    -- Check validity on a separate thread so it doesn't freeze the game
                     task.spawn(function()
                         local success, err = pcall(function()
                             game:GetService("ContentProvider"):PreloadAsync({testImg})
                         end)
                         
-                        -- If it completely failed or the image did not load at all
                         if not success or not testImg.IsLoaded then
                             Library:Notification({Text = "Invalid Image ID! Reverting.", Duration = 3})
                             
@@ -1070,7 +1120,6 @@ function Library:Window(title, size, toggleOpts)
                     local val = nil
                     if type(v) == "table" then if v.Get then val = v.Get() elseif v.GetState then val = v.GetState() elseif v.GetText then val = v.GetText() end end
                     
-                    -- FIX #1: Corrected "v.G" and "v.B" to "val.G" and "val.B" so saving colors stops erroring out
                     if typeof(val) == "Color3" then val = {val.R * 255, val.G * 255, val.B * 255} end
                     
                     if val ~= nil then data.Flags[k] = val end
