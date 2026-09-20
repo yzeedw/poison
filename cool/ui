@@ -254,17 +254,15 @@ NotifList.Padding = UDim.new(0, 4)
 NotifList.SortOrder = Enum.SortOrder.LayoutOrder
 NotifList.Parent = NotifHolder
 
--- FIX: Notifications now auto-size vertically and text wraps instead of spilling
 function Library:Notification(opts)
     local text = opts.Text or "Notification"
     local duration = opts.Duration or 5
     
     local Holder = Instance.new("Frame")
-    Holder.Size = UDim2.new(1, 0, 0, 0)
-    Holder.AutomaticSize = Enum.AutomaticSize.Y  -- FIX: auto height
+    Holder.Size = UDim2.new(1, 0, 0, 26)
+    Holder.AutomaticSize = Enum.AutomaticSize.Y
     Holder.BackgroundColor3 = Library.Theme.DarkBackground
     Holder.BorderSizePixel = 0
-    Holder.ClipsDescendants = false
     Holder.Parent = NotifHolder
     Holder.Position = UDim2.new(-1.2, 0, 0, 0)
     
@@ -278,26 +276,18 @@ function Library:Notification(opts)
     Accent.ZIndex = 5
     Accent.Parent = Holder
     
-    -- FIX: Padding container so text has minimum height and wraps cleanly
-    local Padding = Instance.new("UIPadding")
-    Padding.PaddingTop = UDim.new(0, 5)
-    Padding.PaddingBottom = UDim.new(0, 5)
-    Padding.PaddingLeft = UDim.new(0, 8)
-    Padding.PaddingRight = UDim.new(0, 6)
-    Padding.Parent = Holder
-
     local TLabel = Instance.new("TextLabel")
     TLabel.Text = text
-    TLabel.Size = UDim2.new(1, -10, 0, 0)  -- FIX: zero height, let AutomaticSize expand
-    TLabel.AutomaticSize = Enum.AutomaticSize.Y  -- FIX: grows with content
+    TLabel.Size = UDim2.new(1, -15, 0, 26)
+    TLabel.AutomaticSize = Enum.AutomaticSize.Y
     TLabel.Position = UDim2.new(0, 8, 0, 0)
     TLabel.BackgroundTransparency = 1
     TLabel.TextColor3 = Library.Theme.Text
     TLabel.FontFace = GetFont()
     TLabel.TextSize = Library.Config.FontSize
     TLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TLabel.TextWrapped = true              -- FIX: wrap long text
     TLabel.TextTruncate = Enum.TextTruncate.None
+    TLabel.TextWrapped = true -- FIX: Wrapping enabled
     TLabel.Parent = Holder
     TLabel.TextStrokeTransparency = 0
     TLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
@@ -313,14 +303,12 @@ function Library:Notification(opts)
     end)
 end
 
--- FIX: Create defaults to TextTruncate.AtEnd so text never bleeds outside fixed-size containers.
--- Elements that need wrapping set TextWrapped = true individually after creation.
 local function Create(class, props, children)
     local inst = Instance.new(class)
     if class == "TextLabel" or class == "TextButton" or class == "TextBox" then
         inst.TextSize = Library.Config.FontSize
         inst.FontFace = GetFont()
-        inst.TextTruncate = Enum.TextTruncate.None  -- FIX: default truncation
+        inst.TextWrapped = true -- FIX: Standard wrapper enabling to ensure components go down naturally instead of overflowing
         table.insert(Library.Elements.AllTextObjects, inst)
     end
     for k, v in pairs(props or {}) do 
@@ -374,7 +362,8 @@ function Library:Window(title, size, toggleOpts)
     TitleLabel.TextSize = Library.Config.FontSize
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Center
     TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
-    TitleLabel.TextTruncate = Enum.TextTruncate.None  -- FIX: truncate title if too long
+    TitleLabel.TextTruncate = Enum.TextTruncate.None
+    TitleLabel.TextWrapped = true -- FIX
     TitleLabel.ZIndex = 4
     TitleLabel.TextStrokeTransparency = 0
     TitleLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
@@ -478,6 +467,7 @@ function Library:Window(title, size, toggleOpts)
     toggleButton.TextColor3 = Color3.fromRGB(160, 160, 160)
     toggleButton.Font = Enum.Font.SourceSans
     toggleButton.TextSize = 16
+    toggleButton.TextWrapped = true -- FIX
     toggleButton.AutoButtonColor = false
     toggleButton.Parent = innerBorder
 
@@ -616,7 +606,7 @@ function Library:Window(title, size, toggleOpts)
             TextColor3 = Library.Theme.Text,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextYAlignment = Enum.TextYAlignment.Center,
-            TextTruncate = Enum.TextTruncate.None,  -- FIX: truncate tab names that are too long
+            TextTruncate = Enum.TextTruncate.None,
             TextStrokeTransparency = 0,
             TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
             ZIndex = 5,
@@ -725,7 +715,6 @@ function Library:Window(title, size, toggleOpts)
                 Parent = SectionFrame
             })
 
-            -- FIX: Section header truncates instead of overflowing
             local Header = Create("TextLabel", { Name = "Header", Text = sectionName, Size = UDim2.new(1, -8, 0, 18), Position = UDim2.new(0, 4, 0, 2), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.None, ZIndex = 5, Parent = SectionFrame, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
             table.insert(Library.Elements.Sections, { Frame = SectionFrame, Header = Header, Accent = SectionAccent })
             
@@ -734,12 +723,11 @@ function Library:Window(title, size, toggleOpts)
             Create("UIPadding", {PaddingBottom = UDim.new(0, 6), Parent = ElementList})
             
             function Section:Button(opts)
-                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Box = Create("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
+                -- FIX: Add AutomaticSize.Y and convert Y-Scale height strictly to Offset limits to let containers scale with multiline texts
+                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 22), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
+                local Box = Create("Frame", { Size = UDim2.new(1, 0, 0, 22), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                -- FIX: Button label truncates at end; ClipsDescendants on Box prevents any bleed
-                Box.ClipsDescendants = true
-                local Label = Create("TextLabel", { Text = opts.Name or "Button", Size = UDim2.new(1, -10, 1, 0), Position = UDim2.new(0, 5, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.None, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Label = Create("TextLabel", { Text = opts.Name or "Button", Size = UDim2.new(1, -10, 0, 22), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 5, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.None, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 table.insert(Library.Elements.Buttons, Box)
                 local btn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 9, Parent = Box })
                 btn.MouseButton1Click:Connect(function()
@@ -752,13 +740,11 @@ function Library:Window(title, size, toggleOpts)
             end
 
             function Section:TextBox(opts)
-                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                -- FIX: TextBox label truncates
-                local Label = Create("TextLabel", { Text = opts.Name or "Text Box", Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 36), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
+                local Label = Create("TextLabel", { Text = opts.Name or "Text Box", Size = UDim2.new(1, 0, 0, 14), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local Box = Create("Frame", { Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0, 16), BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                Box.ClipsDescendants = true  -- FIX: clip input text inside box
-                local Input = Create("TextBox", { Text = opts.Default or "", PlaceholderText = opts.Placeholder or "...", Size = UDim2.new(1, -10, 1, 0), Position = UDim2.new(0, 5, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Input = Create("TextBox", { Text = opts.Default or "", PlaceholderText = opts.Placeholder or "...", Size = UDim2.new(1, -10, 1, 0), Position = UDim2.new(0, 5, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 table.insert(Library.Elements.TextBoxes, { Box = Box, Input = Input })
                 Input.FocusLost:Connect(function() if opts.Callback then opts.Callback(Input.Text) end end)
                 local Obj = { GetText = function() return Input.Text end, SetText = function(t) Input.Text = t end, Set = function(t) Input.Text = t end, Get = function() return Input.Text end }
@@ -770,9 +756,8 @@ function Library:Window(title, size, toggleOpts)
                 local h, s, v = 0, 1, 1
                 local color = opts.Default or Color3.fromHSV(h, s, v)
                 h, s, v = Color3.toHSV(color)
-                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                -- FIX: ColorPicker label truncates; right side swatch is fixed width so label gets remaining space
-                local Label = Create("TextLabel", { Text = opts.Name or "Color Picker", Size = UDim2.new(1, -28, 1, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 18), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
+                local Label = Create("TextLabel", { Text = opts.Name or "Color Picker", Size = UDim2.new(1, -28, 0, 18), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local CPHolder = Create("Frame", { Size = UDim2.new(0, 20, 0, 12), Position = UDim2.new(1, -20, 0.5, -6), BackgroundColor3 = color, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(CPHolder)
                 local CPBtn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 8, Parent = CPHolder })
@@ -813,12 +798,12 @@ function Library:Window(title, size, toggleOpts)
 
             function Section:Toggle(opts)
                 local state = opts.Default or false; local ToggleObj = {}
-                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
+                -- FIX: Add AutomaticSize.Y so multi-line text expands the layout smoothly 
+                local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 18), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
                 local Box = Create("Frame", { Size = UDim2.new(0, 12, 0, 12), Position = UDim2.new(0, 0, 0.5, -6), BackgroundColor3 = state and Library.Theme.Accent or Color3.fromRGB(50, 50, 50), BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
                 
-                -- FIX: Toggle label is bounded by RightSide width (65px) on the right, truncates cleanly
-                local Label = Create("TextLabel", { Text = opts.Name or "Toggle", Size = UDim2.new(1, -75, 1, 0), Position = UDim2.new(0, 18, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Label = Create("TextLabel", { Text = opts.Name or "Toggle", Size = UDim2.new(1, -75, 0, 18), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 18, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local RightSide = Create("Frame", { Size = UDim2.new(0, 65, 1, 0), Position = UDim2.new(1, -65, 0, 0), BackgroundTransparency = 1, ZIndex = 8, Parent = Holder })
                 Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = RightSide })
                 
@@ -883,9 +868,8 @@ function Library:Window(title, size, toggleOpts)
                 local min, max = opts.Min, opts.Max
                 local val = opts.Default or min; local sliding = false
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                -- FIX: Slider label is bounded so it doesn't overlap the value label on the right
                 local Label = Create("TextLabel", { Text = opts.Name or "Slider", Size = UDim2.new(1, -45, 0, 14), Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local Value = Create("TextLabel", { Text = tostring(val), Size = UDim2.new(0, 40, 0, 14), Position = UDim2.new(1, -40, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Value = Create("TextLabel", { Text = tostring(val), Size = UDim2.new(0, 40, 0, 14), Position = UDim2.new(1, -40, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local SliderBack = Create("Frame", { Name = "SliderBack", Size = UDim2.new(1, 0, 0, 8), Position = UDim2.new(0, 0, 0, 18), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 AddInlineOutline(SliderBack)
                 local SliderFill = Create("Frame", { Name = "Fill", Size = UDim2.new((val - min) / (max - min), 0, 1, 0), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 8, Parent = SliderBack })
@@ -904,13 +888,10 @@ function Library:Window(title, size, toggleOpts)
                 local dropped = false
                 opts.Options = opts.Options or {}
                 local selected = opts.Default or (opts.Options[1] or "None")
-                local Holder = Create("Frame", { Name = "DropdownHolder", Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                -- FIX: Dropdown label truncates
-                local Label = Create("TextLabel", { Text = opts.Name, Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Holder = Create("Frame", { Name = "DropdownHolder", Size = UDim2.new(1, 0, 0, 36), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
+                local Label = Create("TextLabel", { Text = opts.Name, Size = UDim2.new(1, 0, 0, 14), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.None, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local Box = Create("Frame", { Name = "DropdownBox", Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0, 16), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                Box.ClipsDescendants = true  -- FIX: clip value label inside box
-                -- FIX: selected value label truncates; arrow is fixed 15px on right, value gets rest minus arrow
                 local ValueLabel = Create("TextLabel", { Text = tostring(selected), Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 6, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, TextTruncate = Enum.TextTruncate.None, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local Arrow = Create("TextLabel", { Text = "v", Size = UDim2.new(0, 15, 1, 0), Position = UDim2.new(1, -15, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local Button = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 9, Parent = Box })
@@ -928,7 +909,7 @@ function Library:Window(title, size, toggleOpts)
                     OptionHolder:ClearAllChildren(); dropElementData.Buttons = {}
                     Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = OptionHolder })
                     if #options == 0 then
-                        local emptyLabel = Create("TextLabel", { Text = "No Options Available", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextTruncate = Enum.TextTruncate.None, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Center })
+                        local emptyLabel = Create("TextLabel", { Text = "No Options Available", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Center })
                         table.insert(dropElementData.Buttons, emptyLabel)
                     else
                         for _, option in ipairs(options) do
@@ -944,7 +925,7 @@ function Library:Window(title, size, toggleOpts)
                                 ZIndex = 5005, 
                                 Parent = OptionHolder, 
                                 TextXAlignment = Enum.TextXAlignment.Left, 
-                                TextTruncate = Enum.TextTruncate.None,  -- FIX: option text truncates
+                                TextTruncate = Enum.TextTruncate.None,
                                 TextStrokeTransparency = 0, 
                                 TextStrokeColor3 = Color3.fromRGB(0,0,0) 
                             })
@@ -1090,7 +1071,9 @@ function Library:Window(title, size, toggleOpts)
                 for k, v in pairs(Library.Flags) do
                     local val = nil
                     if type(v) == "table" then if v.Get then val = v.Get() elseif v.GetState then val = v.GetState() elseif v.GetText then val = v.GetText() end end
+                    
                     if typeof(val) == "Color3" then val = {val.R * 255, val.G * 255, val.B * 255} end
+                    
                     if val ~= nil then data.Flags[k] = val end
                 end
                 local success, err = pcall(function() writefile(ConfigPath .. saveTarget .. ".json", HttpService:JSONEncode(data)) end)
