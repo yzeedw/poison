@@ -5,6 +5,18 @@ local HttpService = game:GetService("HttpService")
 
 local Library = { Config = { Font = "Proggy", FontSize = 11 } }
 
+local function GetSafeGuiParent()
+    if gethui then return gethui() end
+    local success, core = pcall(function() return game:GetService("CoreGui") end)
+    if success and core then
+        local ok = pcall(function() local f = Instance.new("Folder", core) f:Destroy() end)
+        if ok then return core end
+    end
+    return game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local ParentGui = GetSafeGuiParent()
+
 local function Tween(obj, props, time)
     TweenService:Create(obj, TweenInfo.new(time or 0.12, Enum.EasingStyle.Quad), props):Play()
 end
@@ -198,13 +210,13 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CelestiteUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999
-ScreenGui.Parent = (gethui and gethui()) or CoreGui
+ScreenGui.Parent = ParentGui
 
 local NotifGui = Instance.new("ScreenGui")
 NotifGui.Name = "CelestiteNotifUI"
 NotifGui.ResetOnSpawn = false
 NotifGui.DisplayOrder = 1000
-NotifGui.Parent = (gethui and gethui()) or CoreGui
+NotifGui.Parent = ParentGui
 
 local function AddOutline(inst)
     local out = Instance.new("UIStroke")
@@ -444,7 +456,7 @@ function Library:Window(title, size, toggleOpts)
     toggleGui.Name = "ToggleButtonGui"
     toggleGui.ResetOnSpawn = false
     toggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    toggleGui.Parent = (gethui and gethui()) or CoreGui
+    toggleGui.Parent = ParentGui
 
     local outerBorder = Instance.new("Frame")
     outerBorder.Name = "OuterBorder"
@@ -748,7 +760,7 @@ function Library:Window(title, size, toggleOpts)
                 local Label = Create("TextLabel", { Text = opts.Name or "Button", Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true, ClipsDescendants = false, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 table.insert(Library.Elements.Buttons, Box)
                 
-                local btn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 9, Parent = Box })
+                local btn = Create("TextButton", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Text = "", ZIndex = 9, Parent = Box })
                 btn.MouseButton1Click:Connect(function()
                     Tween(Box, {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}, 0.08)
                     task.wait(0.08)
@@ -832,7 +844,7 @@ function Library:Window(title, size, toggleOpts)
                 
                 local function Set(v) state = v; Tween(Box, {BackgroundColor3 = state and Library.Theme.Accent or Color3.fromRGB(50, 50, 50)}); Tween(Label, {TextColor3 = Library.Theme.Text}); if opts.Callback then opts.Callback(state) end end
                 local function ToggleState() state = not state; Set(state) end
-                local btn = Create("TextButton", { Size = UDim2.new(1, -65, 1, 0), BackgroundTransparency = 1, Text = "", TextTransparency = 1, ZIndex = 9, Parent = Holder })
+                local btn = Create("TextButton", { Size = UDim2.new(1, -65, 0, 16), BackgroundTransparency = 1, Text = "", TextTransparency = 1, ZIndex = 9, Parent = Holder })
                 btn.MouseButton1Click:Connect(ToggleState)
                 ToggleObj = { GetState = function() return state end, Get = function() return state end, Set = Set }
                 table.insert(Library.Elements.Toggles, { Box = Box, Label = Label, GetState = function() return state end })
