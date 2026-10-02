@@ -370,7 +370,6 @@ local function Create(class, props, children)
     if class == "TextLabel" or class == "TextButton" or class == "TextBox" then
         inst.TextSize = Library.Config.FontSize
         inst.FontFace = GetFont()
-        inst.TextWrapped = true
         table.insert(Library.Elements.AllTextObjects, inst)
     end
     for k, v in pairs(props or {}) do 
@@ -432,7 +431,6 @@ function Library:Window(title, size, toggleOpts, windowOpts)
     TitleLabel.Parent = TitleStrip
     table.insert(Library.Elements.AllTextObjects, TitleLabel)
 
-    -- LOGO CONTAINER ABOVE TABS (as in image)
     local LogoHolder = Instance.new("Frame")
     LogoHolder.Name = "LogoHolder"
     LogoHolder.Size = UDim2.new(0, 110, 0, 0)
@@ -693,12 +691,12 @@ function Library:Window(title, size, toggleOpts, windowOpts)
             Size = UDim2.new(1, -16, 1, 0),
             Position = UDim2.new(0, 12, 0, 0),
             BackgroundTransparency = 1,
-            FontFace = true,
+            FontFace = GetFont(),
             TextSize = Library.Config.FontSize,
             TextColor3 = Library.Theme.Text,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextYAlignment = Enum.TextYAlignment.Center,
-            TextWrapped = true,
+            TextTruncate = Enum.TextTruncate.AtEnd,
             TextStrokeTransparency = 0,
             TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
             ZIndex = 5,
@@ -713,16 +711,6 @@ function Library:Window(title, size, toggleOpts, windowOpts)
             BorderSizePixel = 0,
             Visible = false,
             ZIndex = 6,
-            Parent = TabButton
-        })
-
-        Create("Frame", {
-            Name = "Border",
-            Size = UDim2.new(1, 0, 0, 1),
-            Position = UDim2.new(0, 0, 1, -1),
-            BackgroundColor3 = Library.Theme.Outline,
-            BorderSizePixel = 0,
-            ZIndex = 4,
             Parent = TabButton
         })
 
@@ -750,7 +738,7 @@ function Library:Window(title, size, toggleOpts, windowOpts)
             Parent = TabPage,
             ClipsDescendants = false
         })
-        local LeftList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), Parent = LeftColumn})
+        local LeftList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = LeftColumn})
 
         local RightColumn = Create("Frame", {
             Name = "Right",
@@ -762,7 +750,7 @@ function Library:Window(title, size, toggleOpts, windowOpts)
             Parent = TabPage,
             ClipsDescendants = false
         })
-        local RightList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), Parent = RightColumn})
+        local RightList = Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = RightColumn})
 
         local function UpdateCanvas()
             local maxH = math.max(LeftList.AbsoluteContentSize.Y, RightList.AbsoluteContentSize.Y)
@@ -807,18 +795,19 @@ function Library:Window(title, size, toggleOpts, windowOpts)
                 Parent = SectionFrame
             })
 
-            local Header = Create("TextLabel", { Name = "Header", Text = sectionName, Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 4, 0, 4), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true, ZIndex = 5, Parent = SectionFrame, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+            local Header = Create("TextLabel", { Name = "Header", Text = sectionName, Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 4, 0, 4), BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true, ZIndex = 5, Parent = SectionFrame, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
             table.insert(Library.Elements.Sections, { Frame = SectionFrame, Header = Header, Accent = SectionAccent })
             
             local ElementList = Create("Frame", { Name = "Elements", Size = UDim2.new(1, -10, 0, 0), Position = UDim2.new(0, 5, 0, 22), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 5, Parent = SectionFrame, ClipsDescendants = false })
-            Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = ElementList})
+            Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5), Parent = ElementList})
             Create("UIPadding", {PaddingBottom = UDim.new(0, 6), Parent = ElementList})
             
             function Section:Button(opts)
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Box = Create("Frame", { Size = UDim2.new(1, 0, 0, 22), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
+                local Box = Create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                local Label = Create("TextLabel", { Text = opts.Name or "Button", Size = UDim2.new(1, -10, 1, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 5, 0, 3), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Label = Create("TextLabel", { Text = opts.Name or "Button", Size = UDim2.new(1, -10, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 5, 0, 3), BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                Create("UIPadding", { PaddingBottom = UDim.new(0, 6), Parent = Box })
                 table.insert(Library.Elements.Buttons, Box)
                 local btn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 9, Parent = Box })
                 btn.MouseButton1Click:Connect(function()
@@ -832,10 +821,12 @@ function Library:Window(title, size, toggleOpts, windowOpts)
 
             function Section:TextBox(opts)
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Label = Create("TextLabel", { Text = opts.Name or "Text Box", Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local Box = Create("Frame", { Size = UDim2.new(1, 0, 0, 20), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 0, 0, 16), BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
+                Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), Parent = Holder })
+                
+                local Label = Create("TextLabel", { Text = opts.Name or "Text Box", Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Box = Create("Frame", { Size = UDim2.new(1, 0, 0, 20), BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                local Input = Create("TextBox", { Text = opts.Default or "", PlaceholderText = opts.Placeholder or "...", Size = UDim2.new(1, -10, 1, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 5, 0, 2), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Input = Create("TextBox", { Text = opts.Default or "", PlaceholderText = opts.Placeholder or "...", Size = UDim2.new(1, -10, 1, 0), Position = UDim2.new(0, 5, 0, 0), BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 table.insert(Library.Elements.TextBoxes, { Box = Box, Input = Input })
                 Input.FocusLost:Connect(function() if opts.Callback then opts.Callback(Input.Text) end end)
                 local Obj = { GetText = function() return Input.Text end, SetText = function(t) Input.Text = t end, Set = function(t) Input.Text = t end, Get = function() return Input.Text end }
@@ -848,7 +839,7 @@ function Library:Window(title, size, toggleOpts, windowOpts)
                 local color = opts.Default or Color3.fromHSV(h, s, v)
                 h, s, v = Color3.toHSV(color)
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Label = Create("TextLabel", { Text = opts.Name or "Color Picker", Size = UDim2.new(1, -28, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Label = Create("TextLabel", { Text = opts.Name or "Color Picker", Size = UDim2.new(1, -28, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local CPHolder = Create("Frame", { Size = UDim2.new(0, 20, 0, 12), Position = UDim2.new(1, -20, 0, 2), BackgroundColor3 = color, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(CPHolder)
                 local CPBtn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 8, Parent = CPHolder })
@@ -887,15 +878,14 @@ function Library:Window(title, size, toggleOpts, windowOpts)
                 return CPObj
             end
 
-            -- UPDATED TOGGLE WITH TOOLTIP & DYNAMIC WRAPPING
             function Section:Toggle(opts)
                 local state = opts.Default or false; local ToggleObj = {}
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Box = Create("Frame", { Size = UDim2.new(0, 12, 0, 12), Position = UDim2.new(0, 0, 0, 3), BackgroundColor3 = state and Library.Theme.Accent or Color3.fromRGB(50, 50, 50), BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
+                local Box = Create("Frame", { Size = UDim2.new(0, 12, 0, 12), Position = UDim2.new(0, 0, 0, 2), BackgroundColor3 = state and Library.Theme.Accent or Color3.fromRGB(50, 50, 50), BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
                 
-                local Label = Create("TextLabel", { Text = opts.Name or "Toggle", Size = UDim2.new(1, -75, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 18, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local RightSide = Create("Frame", { Size = UDim2.new(0, 65, 1, 0), Position = UDim2.new(1, -65, 0, 0), BackgroundTransparency = 1, ZIndex = 8, Parent = Holder })
+                local Label = Create("TextLabel", { Text = opts.Name or "Toggle", Size = UDim2.new(1, -75, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 18, 0, 0), BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local RightSide = Create("Frame", { Size = UDim2.new(0, 65, 0, 18), Position = UDim2.new(1, -65, 0, 0), BackgroundTransparency = 1, ZIndex = 8, Parent = Holder })
                 Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = RightSide })
                 
                 local function Set(v) state = v; Tween(Box, {BackgroundColor3 = state and Library.Theme.Accent or Color3.fromRGB(50, 50, 50)}); Tween(Label, {TextColor3 = Library.Theme.Text}); if opts.Callback then opts.Callback(state) end end
@@ -914,7 +904,7 @@ function Library:Window(title, size, toggleOpts, windowOpts)
                 
                 function ToggleObj:Keybind(kopts)
                     local bind = { Key = kopts.Default or Enum.KeyCode.X, Binding = false, Started = 0, Label = nil, OnTrigger = ToggleState, Callback = kopts.Callback }
-                    local Label = Create("TextLabel", { Text = GetKeyName(bind.Key), Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 9, Parent = RightSide, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                    local Label = Create("TextLabel", { Text = GetKeyName(bind.Key), Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 9, Parent = RightSide, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                     bind.Label = Label
                     local BindBtn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 11, Parent = bind.Label })
                     BindBtn.MouseButton1Click:Connect(function() if bind.Binding then return end; bind.Binding = true; bind.Started = tick(); bind.Label.Text = "?"; bind.Label.TextColor3 = Library.Theme.Accent end)
@@ -947,7 +937,7 @@ function Library:Window(title, size, toggleOpts, windowOpts)
                     local function ClosePicker() Picker.Visible = false; if pickerConn then pickerConn:Disconnect(); pickerConn = nil end; if renderConn then renderConn:Disconnect(); renderConn = nil end end
                     CPBtn.MouseButton1Click:Connect(function() if Picker.Visible then ClosePicker() else UpdatePos(); Picker.Visible = true; renderConn = game:GetService("RunService").RenderStepped:Connect(UpdatePos); pickerConn = UIS.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then if not IsWithin(Picker, input) and not IsWithin(CPHolder, input) then ClosePicker() end end end) end end)
                     local sS, sH = false, false
-                    local function Update() color = Color3.fromHSV(h, s, v); CPHolder.BackgroundColor3 = color; SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1); copts.Callback(color) end
+                    local function Update() color = Color3.fromHSV(h, s, v); CPHolder.BackgroundColor3 = color; SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1); if copts.Callback then copts.Callback(color) end end
                     local function TrackInput(input)
                         if sS then local relX = math.clamp((input.Position.X - SVBox.AbsolutePosition.X) / SVBox.AbsoluteSize.X, 0, 1); local relY = math.clamp((input.Position.Y - SVBox.AbsolutePosition.Y) / SVBox.AbsoluteSize.Y, 0, 1); s, v = relX, 1 - relY; Marker.Position = UDim2.new(s, -2, 1-v, -2); Update()
                         elseif sH then h = math.clamp((input.Position.Y - HueSlider.AbsolutePosition.Y) / HueSlider.AbsoluteSize.Y, 0, 1); HueMarker.Position = UDim2.new(0, -2, h, 0); SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1); Update() end
@@ -962,18 +952,22 @@ function Library:Window(title, size, toggleOpts, windowOpts)
             end
 
             function Section:Slider(opts)
-                local min, max = opts.Min, opts.Max
+                local min, max = opts.Min or 0, opts.Max or 100
                 local val = opts.Default or min; local sliding = false
                 local Holder = Create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Label = Create("TextLabel", { Text = opts.Name or "Slider", Size = UDim2.new(1, -45, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local Value = Create("TextLabel", { Text = tostring(val), Size = UDim2.new(0, 40, 0, 14), Position = UDim2.new(1, -40, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local SliderBack = Create("Frame", { Name = "SliderBack", Size = UDim2.new(1, 0, 0, 8), Position = UDim2.new(0, 0, 0, 18), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
+                Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), Parent = Holder })
+                
+                local TopRow = Create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 7, Parent = Holder })
+                local Label = Create("TextLabel", { Text = opts.Name or "Slider", Size = UDim2.new(1, -45, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 7, Parent = TopRow, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Value = Create("TextLabel", { Text = tostring(val), Size = UDim2.new(0, 40, 1, 0), Position = UDim2.new(1, -40, 0, 0), BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 7, Parent = TopRow, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                
+                local SliderBack = Create("Frame", { Name = "SliderBack", Size = UDim2.new(1, 0, 0, 8), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 AddInlineOutline(SliderBack)
-                local SliderFill = Create("Frame", { Name = "Fill", Size = UDim2.new((val - min) / (max - min), 0, 1, 0), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 8, Parent = SliderBack })
+                local SliderFill = Create("Frame", { Name = "Fill", Size = UDim2.new((val - min) / math.max(1, (max - min)), 0, 1, 0), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 8, Parent = SliderBack })
                 table.insert(Library.Elements.Sliders, { Fill = SliderFill, Label = Label, Value = Value, Back = SliderBack })
                 local btn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", TextTransparency = 1, ZIndex = 10, Parent = SliderBack })
                 local function update(input) local pct = math.clamp((input.Position.X - SliderBack.AbsolutePosition.X) / SliderBack.AbsoluteSize.X, 0, 1); val = math.floor(min + (max - min) * pct); SliderFill.Size = UDim2.new(pct, 0, 1, 0); Value.Text = tostring(val); if opts.Callback then opts.Callback(val) end end
-                local function Set(v) val = v; SliderFill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0); Value.Text = tostring(val); if opts.Callback then opts.Callback(val) end end
+                local function Set(v) val = v; SliderFill.Size = UDim2.new((val - min) / math.max(1, (max - min)), 0, 1, 0); Value.Text = tostring(val); if opts.Callback then opts.Callback(val) end end
                 btn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = true; update(input) end end)
                 UIS.InputChanged:Connect(function(input) if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then update(input) end end)
                 UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = false end end)
@@ -981,7 +975,6 @@ function Library:Window(title, size, toggleOpts, windowOpts)
                 Library.Flags[opts.Flag or opts.Name] = Obj
             end
 
-            -- UPDATED DROPDOWN WITH MULTI-SELECTION SUPPORT
             function Section:Dropdown(opts)
                 local dropped = false
                 opts.Options = opts.Options or {}
@@ -1011,11 +1004,13 @@ function Library:Window(title, size, toggleOpts, windowOpts)
                 end
 
                 local Holder = Create("Frame", { Name = "DropdownHolder", Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList })
-                local Label = Create("TextLabel", { Text = opts.Name, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local Box = Create("Frame", { Name = "DropdownBox", Size = UDim2.new(1, 0, 0, 20), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 0, 0, 16), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
+                Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), Parent = Holder })
+                
+                local Label = Create("TextLabel", { Text = opts.Name, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 7, Parent = Holder, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Box = Create("Frame", { Name = "DropdownBox", Size = UDim2.new(1, 0, 0, 20), BackgroundColor3 = Library.Theme.SectionBackground, BorderSizePixel = 0, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
-                local ValueLabel = Create("TextLabel", { Text = FormatDisplayValue(), Size = UDim2.new(1, -20, 1, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.new(0, 6, 0, 2), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, TextWrapped = true, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
-                local Arrow = Create("TextLabel", { Text = "v", Size = UDim2.new(0, 15, 1, 0), Position = UDim2.new(1, -15, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local ValueLabel = Create("TextLabel", { Text = FormatDisplayValue(), Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 6, 0, 0), BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                local Arrow = Create("TextLabel", { Text = "v", Size = UDim2.new(0, 15, 1, 0), Position = UDim2.new(1, -15, 0, 0), BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
                 local Button = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 9, Parent = Box })
                 local DropContainer = Create("Frame", { Name = "DropContainer", BackgroundColor3 = Library.Theme.DarkBackground, BorderSizePixel = 0, Visible = false, ZIndex = 5000, Parent = ScreenGui, ClipsDescendants = true })
                 AddOutline(DropContainer)
@@ -1032,7 +1027,7 @@ function Library:Window(title, size, toggleOpts, windowOpts)
                     Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = OptionHolder })
                     
                     if #options == 0 then
-                        local emptyLabel = Create("TextLabel", { Text = "No Options Available", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Center })
+                        local emptyLabel = Create("TextLabel", { Text = "No Options Available", Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, FontFace = GetFont(), TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, ZIndex = 5005, Parent = OptionHolder, TextXAlignment = Enum.TextXAlignment.Center })
                         table.insert(dropElementData.Buttons, emptyLabel)
                     else
                         for _, option in ipairs(options) do
@@ -1041,14 +1036,14 @@ function Library:Window(title, size, toggleOpts, windowOpts)
                                 Text = tostring(option), 
                                 Size = UDim2.new(1, 0, 0, 18), 
                                 BackgroundTransparency = 1, 
-                                FontFace = true, 
+                                FontFace = GetFont(), 
                                 TextSize = Library.Config.FontSize, 
                                 TextColor3 = isSelected and Library.Theme.Accent or Library.Theme.Text, 
                                 BorderSizePixel = 0, 
                                 ZIndex = 5005, 
                                 Parent = OptionHolder, 
                                 TextXAlignment = Enum.TextXAlignment.Left, 
-                                TextWrapped = true,
+                                TextTruncate = Enum.TextTruncate.AtEnd,
                                 TextStrokeTransparency = 0, 
                                 TextStrokeColor3 = Color3.fromRGB(0,0,0) 
                             })
@@ -1270,4 +1265,5 @@ function Library:Window(title, size, toggleOpts, windowOpts)
     task.delay(0.1, function() Library:UpdateTheme() end)
     return Window
 end
- return Library
+
+return Library
