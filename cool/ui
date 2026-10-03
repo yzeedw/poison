@@ -687,6 +687,9 @@ function Library:Window(title, size, toggleOpts)
         if not gpe and input.KeyCode == Enum.KeyCode.RightShift then ToggleUI() end
     end)
 
+    -- ════════════════════════════════════════════════════════════════════════
+    function Window:Tab(name)
+    -- ════════════════════════════════════════════════════════════════════════
         local Tab = {}
 
         local TabButton = Create("TextButton", {
@@ -842,6 +845,7 @@ function Library:Window(title, size, toggleOpts)
                 return { SetText = function(t) Label.Text = t end }
             end
 
+            -- ──────────────────────────────────────────────────────────────
             function Section:TextBox(opts)
                 local Holder = Create("Frame", {
                     Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, ZIndex = 6, Parent = ElementList
@@ -941,6 +945,9 @@ function Library:Window(title, size, toggleOpts)
                 return CPObj
             end
 
+            -- ──────────────────────────────────────────────────────────────
+            --  TOGGLE  (with TextWrapped + Tooltip support)
+            -- ──────────────────────────────────────────────────────────────
             function Section:Toggle(opts)
                 local state = opts.Default or false
                 local ToggleObj = {}
