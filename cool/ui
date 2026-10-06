@@ -369,10 +369,11 @@ function Library:Window(title, size, toggleOpts, logoOpts)
     MainScale.Scale = Library.Scale or 1
     MainScale.Parent = Main
 
+    -- Title Strip placed on the top-right header section
     local TitleStrip = Instance.new("Frame")
     TitleStrip.Name = "TitleStrip"
-    TitleStrip.Size = UDim2.new(1, -2, 0, 20)
-    TitleStrip.Position = UDim2.new(0, 1, 0, 1)
+    TitleStrip.Size = UDim2.new(1, -113, 0, 20)
+    TitleStrip.Position = UDim2.new(0, 112, 0, 1)
     TitleStrip.BackgroundColor3 = Library.Theme.DarkBackground
     TitleStrip.BorderSizePixel = 0
     TitleStrip.ZIndex = 3
@@ -395,10 +396,11 @@ function Library:Window(title, size, toggleOpts, logoOpts)
     TitleLabel.Parent = TitleStrip
     table.insert(Library.Elements.AllTextObjects, TitleLabel)
 
+    -- Logo Container positioned at the top-left corner of sidebar
     local LogoContainer = Instance.new("Frame")
     LogoContainer.Name = "LogoContainer"
     LogoContainer.Size = UDim2.new(0, 110, 0, currentLogoHeight)
-    LogoContainer.Position = UDim2.new(0, 1, 0, 21)
+    LogoContainer.Position = UDim2.new(0, 1, 0, 1)
     LogoContainer.BackgroundColor3 = Library.Theme.TabBarBackground
     LogoContainer.BorderSizePixel = 0
     LogoContainer.ZIndex = 3
@@ -426,8 +428,8 @@ function Library:Window(title, size, toggleOpts, logoOpts)
 
     local TabBar = Instance.new("ScrollingFrame")
     TabBar.Name = "TabBar"
-    TabBar.Size = UDim2.new(0, 110, 1, -22)
-    TabBar.Position = UDim2.new(0, 1, 0, 21)
+    TabBar.Size = UDim2.new(0, 110, 1, -2)
+    TabBar.Position = UDim2.new(0, 1, 0, 1)
     TabBar.BackgroundColor3 = Library.Theme.TabBarBackground
     TabBar.BorderSizePixel = 0
     TabBar.ZIndex = 3
@@ -442,9 +444,10 @@ function Library:Window(title, size, toggleOpts, logoOpts)
     TabList.Padding = UDim.new(0, 0)
     TabList.Parent = TabBar
 
+    -- Vertical Line separating sidebar and content area
     local Separator = Instance.new("Frame")
-    Separator.Size = UDim2.new(0, 1, 1, -21)
-    Separator.Position = UDim2.new(0, 111, 0, 21)
+    Separator.Size = UDim2.new(0, 1, 1, -2)
+    Separator.Position = UDim2.new(0, 111, 0, 1)
     Separator.BackgroundColor3 = Library.Theme.Outline
     Separator.BorderSizePixel = 0
     Separator.ZIndex = 4
@@ -468,13 +471,13 @@ function Library:Window(title, size, toggleOpts, logoOpts)
             LogoImage.Image = FormatAssetId(currentLogoId)
             LogoContainer.Size = UDim2.new(0, 110, 0, currentLogoHeight)
             LogoContainer.Visible = true
-            TabBar.Position = UDim2.new(0, 1, 0, 21 + currentLogoHeight)
-            TabBar.Size = UDim2.new(0, 110, 1, -(22 + currentLogoHeight))
+            TabBar.Position = UDim2.new(0, 1, 0, 1 + currentLogoHeight)
+            TabBar.Size = UDim2.new(0, 110, 1, -(2 + currentLogoHeight))
         else
             currentLogoId = ""
             LogoContainer.Visible = false
-            TabBar.Position = UDim2.new(0, 1, 0, 21)
-            TabBar.Size = UDim2.new(0, 110, 1, -22)
+            TabBar.Position = UDim2.new(0, 1, 0, 1)
+            TabBar.Size = UDim2.new(0, 110, 1, -2)
         end
     end
 
@@ -498,11 +501,15 @@ function Library:Window(title, size, toggleOpts, logoOpts)
     })
 
     local dragging, dragStart, startPos
-    TitleStrip.InputBegan:Connect(function(input) 
+    local function StartDragging(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
             dragging = true; dragStart = input.Position; startPos = Main.Position 
-        end 
-    end)
+        end
+    end
+
+    TitleStrip.InputBegan:Connect(StartDragging)
+    LogoContainer.InputBegan:Connect(StartDragging)
+
     UIS.InputChanged:Connect(function(input) 
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then 
             local delta = input.Position - dragStart
