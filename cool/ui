@@ -3,7 +3,7 @@ local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 
-local Library = { Config = { Font = "Proggy", FontSize = 11 } }
+local Library = { Config = { Font = "Proggy", FontSize = 11 }, Scale = 1 }
 
 local function Tween(obj, props, time)
     TweenService:Create(obj, TweenInfo.new(time or 0.12, Enum.EasingStyle.Quad), props):Play()
@@ -25,6 +25,14 @@ local function decodeBase64(data)
 end
 
 local b64decode = base64_decode or (crypt and crypt.base64decode) or decodeBase64
+
+local function FormatAssetId(id)
+    id = tostring(id or "")
+    if id:match("^%d+$") then
+        return "rbxassetid://" .. id
+    end
+    return id
+end
 
 local function IsWithin(obj, input)
     local pos = obj.AbsolutePosition
@@ -138,12 +146,24 @@ Library.Theme = {
 Library.Elements = { Toggles = {}, Sliders = {}, Sections = {}, Tabs = {}, Windows = {}, Labels = {}, Dropdowns = {}, Outlines = {}, Inlines = {}, ColorPickers = {}, Buttons = {}, TextBoxes = {}, AllTextObjects = {}, TabTextObjects = {} }
 Library.Flags = {}
 
+function Library:SetScale(scale)
+    Library.Scale = math.clamp(scale or 1, 0.5, 2)
+    for _, win in pairs(Library.Elements.Windows) do
+        if win.Scale then
+            win.Scale.Scale = Library.Scale
+        end
+    end
+end
+
 function Library:UpdateTheme()
     for _, win in pairs(Library.Elements.Windows) do 
         win.Main.BackgroundColor3 = Library.Theme.DarkBackground
         win.TitleStrip.BackgroundColor3 = Library.Theme.DarkBackground
         win.TabBar.BackgroundColor3 = Library.Theme.TabBarBackground
         win.Content.BackgroundColor3 = Library.Theme.Background
+        if win.LogoContainer then
+            win.LogoContainer.BackgroundColor3 = Library.Theme.TabBarBackground
+        end
     end
     for _, sec in pairs(Library.Elements.Sections) do 
         sec.Frame.BackgroundColor3 = Library.Theme.DarkBackground
@@ -200,7 +220,6 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = (gethui and gethui()) or CoreGui
 
--- FIX #2: Created a separate ScreenGui strictly for Notifications so it stays visible when ScreenGui.Enabled = false
 local NotifGui = Instance.new("ScreenGui")
 NotifGui.Name = "CelestiteNotifUI"
 NotifGui.ResetOnSpawn = false
@@ -248,7 +267,7 @@ NotifHolder.Name = "NotifHolder"
 NotifHolder.Size = UDim2.new(0, 250, 1, -40)
 NotifHolder.Position = UDim2.new(0, 10, 0, 10)
 NotifHolder.BackgroundTransparency = 1
-NotifHolder.Parent = NotifGui -- Parented to NotifGui instead of main ScreenGui
+NotifHolder.Parent = NotifGui
 
 local NotifList = Instance.new("UIListLayout")
 NotifList.Padding = UDim.new(0, 4)
@@ -319,14 +338,19 @@ local function Create(class, props, children)
     return inst
 end
 
-function Library:Window(title, size, toggleOpts)
+function Library:Window(title, size, toggleOpts, logoOpts)
     toggleOpts = toggleOpts or {}
+    logoOpts = logoOpts or {}
+
     local currentMethod = toggleOpts.Method or toggleOpts.Mode or "Custom"
     local currentImage = toggleOpts.Image or "10639756312"
     local initialToggleSize = toggleOpts.Size or UDim2.new(0, 45, 0, 45)
     if type(initialToggleSize) == "number" then
         initialToggleSize = UDim2.new(0, initialToggleSize, 0, initialToggleSize)
     end
+
+    local currentLogoId = logoOpts.Image or logoOpts.Logo or toggleOpts.Logo or ""
+    local currentLogoHeight = logoOpts.Height or logoOpts.LogoHeight or toggleOpts.LogoHeight or 50
 
     local Window = { Tabs = {} }
 
@@ -339,6 +363,11 @@ function Library:Window(title, size, toggleOpts)
     Main.ClipsDescendants = true
     Main.Parent = ScreenGui
     AddInlineOutline(Main)
+
+    local MainScale = Instance.new("UIScale")
+    MainScale.Name = "MainScale"
+    MainScale.Scale = Library.Scale or 1
+    MainScale.Parent = Main
 
     local TitleStrip = Instance.new("Frame")
     TitleStrip.Name = "TitleStrip"
@@ -365,6 +394,35 @@ function Library:Window(title, size, toggleOpts)
     TitleLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
     TitleLabel.Parent = TitleStrip
     table.insert(Library.Elements.AllTextObjects, TitleLabel)
+
+    local LogoContainer = Instance.new("Frame")
+    LogoContainer.Name = "LogoContainer"
+    LogoContainer.Size = UDim2.new(0, 110, 0, currentLogoHeight)
+    LogoContainer.Position = UDim2.new(0, 1, 0, 21)
+    LogoContainer.BackgroundColor3 = Library.Theme.TabBarBackground
+    LogoContainer.BorderSizePixel = 0
+    LogoContainer.ZIndex = 3
+    LogoContainer.ClipsDescendants = true
+    LogoContainer.Visible = false
+    LogoContainer.Parent = Main
+
+    local LogoImage = Instance.new("ImageLabel")
+    LogoImage.Name = "LogoImage"
+    LogoImage.Size = UDim2.new(1, -10, 1, -10)
+    LogoImage.Position = UDim2.new(0, 5, 0, 5)
+    LogoImage.BackgroundTransparency = 1
+    LogoImage.ScaleType = Enum.ScaleType.Fit
+    LogoImage.ZIndex = 4
+    LogoImage.Parent = LogoContainer
+
+    local LogoSeparator = Instance.new("Frame")
+    LogoSeparator.Name = "LogoSeparator"
+    LogoSeparator.Size = UDim2.new(1, 0, 0, 1)
+    LogoSeparator.Position = UDim2.new(0, 0, 1, -1)
+    LogoSeparator.BackgroundColor3 = Library.Theme.Outline
+    LogoSeparator.BorderSizePixel = 0
+    LogoSeparator.ZIndex = 5
+    LogoSeparator.Parent = LogoContainer
 
     local TabBar = Instance.new("ScrollingFrame")
     TabBar.Name = "TabBar"
@@ -403,13 +461,40 @@ function Library:Window(title, size, toggleOpts)
     ContentArea.Parent = Main
     AddInlineOutline(ContentArea)
 
+    function Window:SetLogo(imageId, height)
+        if height then currentLogoHeight = height end
+        if imageId and tostring(imageId) ~= "" then
+            currentLogoId = tostring(imageId)
+            LogoImage.Image = FormatAssetId(currentLogoId)
+            LogoContainer.Size = UDim2.new(0, 110, 0, currentLogoHeight)
+            LogoContainer.Visible = true
+            TabBar.Position = UDim2.new(0, 1, 0, 21 + currentLogoHeight)
+            TabBar.Size = UDim2.new(0, 110, 1, -(22 + currentLogoHeight))
+        else
+            currentLogoId = ""
+            LogoContainer.Visible = false
+            TabBar.Position = UDim2.new(0, 1, 0, 21)
+            TabBar.Size = UDim2.new(0, 110, 1, -22)
+        end
+    end
+
+    function Window:SetScale(scaleFactor)
+        MainScale.Scale = math.clamp(scaleFactor or 1, 0.5, 2)
+    end
+
+    if currentLogoId and currentLogoId ~= "" then
+        Window:SetLogo(currentLogoId, currentLogoHeight)
+    end
+
     table.insert(Library.Elements.Windows, {
         Main = Main,
         TitleStrip = TitleStrip,
         TabBar = TabBar,
         Content = ContentArea,
         TitleBar = TitleStrip,
-        AccentLine = Separator
+        AccentLine = Separator,
+        LogoContainer = LogoContainer,
+        Scale = MainScale
     })
 
     local dragging, dragStart, startPos
@@ -421,7 +506,8 @@ function Library:Window(title, size, toggleOpts)
     UIS.InputChanged:Connect(function(input) 
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then 
             local delta = input.Position - dragStart
-            Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            local s = MainScale.Scale
+            Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + (delta.X / s), startPos.Y.Scale, startPos.Y.Offset + (delta.Y / s))
         end 
     end)
     UIS.InputEnded:Connect(function(input) 
@@ -491,14 +577,6 @@ function Library:Window(title, size, toggleOpts)
     customIcon.ZIndex = 4
     customIcon.Visible = false
     customIcon.Parent = toggleButton
-
-    local function FormatAssetId(id)
-        id = tostring(id or "")
-        if id:match("^%d+$") then
-            return "rbxassetid://" .. id
-        end
-        return id
-    end
 
     local function ApplyToggleMethod(method, imageId)
         currentMethod = method or currentMethod
@@ -875,6 +953,7 @@ function Library:Window(title, size, toggleOpts)
                 UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = false end end)
                 local Obj = { Get = function() return val end, Set = Set }
                 Library.Flags[opts.Flag or opts.Name] = Obj
+                return Obj
             end
 
             function Section:Dropdown(opts)
@@ -969,7 +1048,18 @@ function Library:Window(title, size, toggleOpts)
         end
         
         function Tab:Themes(side)
-            local ThemeSection = Tab:Section("Theme & Font Settings", side or "Right")
+            local ThemeSection = Tab:Section("Theme & Scale Settings", side or "Right")
+            
+            ThemeSection:Slider({
+                Name = "UI Scale (%)",
+                Min = 50,
+                Max = 150,
+                Default = math.floor((Library.Scale or 1) * 100),
+                Callback = function(val)
+                    Library:SetScale(val / 100)
+                end
+            })
+
             ThemeSection:Dropdown({ Name = "Font Style", Default = Library.Config.Font, Options = FontNames, Callback = function(fontName) Library.Config.Font = fontName; local newFont = GetFont(); for _, textObj in pairs(Library.Elements.AllTextObjects) do if textObj and textObj.Parent then pcall(function() textObj.FontFace = newFont end) end end end })
             ThemeSection:ColorPicker({ Name = "Accent Color", Default = Library.Theme.Accent, Callback = function(c) Library.Theme.Accent = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Background Color", Default = Library.Theme.Background, Callback = function(c) Library.Theme.Background = c; Library:UpdateTheme() end })
@@ -978,6 +1068,27 @@ function Library:Window(title, size, toggleOpts)
             ThemeSection:ColorPicker({ Name = "Outline Color", Default = Library.Theme.Outline, Callback = function(c) Library.Theme.Outline = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Inline Color", Default = Library.Theme.Inline, Callback = function(c) Library.Theme.Inline = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Section Background", Default = Library.Theme.SectionBackground, Callback = function(c) Library.Theme.SectionBackground = c; Library:UpdateTheme() end })
+
+            local LogoSection = Tab:Section("Window Logo Customization", side or "Right")
+            local customLogoTextBox
+            customLogoTextBox = LogoSection:TextBox({
+                Name = "Logo Asset ID",
+                Default = currentLogoId,
+                Placeholder = "10639756312...",
+                Callback = function(v)
+                    Window:SetLogo(v, currentLogoHeight)
+                end
+            })
+
+            LogoSection:Slider({
+                Name = "Logo Height",
+                Min = 20,
+                Max = 100,
+                Default = currentLogoHeight,
+                Callback = function(val)
+                    Window:SetLogo(currentLogoId, val)
+                end
+            })
 
             local ToggleSection = Tab:Section("Toggle UI Customization", side or "Right")
             local customIconId = currentImage or "10639756312"
@@ -993,7 +1104,6 @@ function Library:Window(title, size, toggleOpts)
                 end
             })
 
-            -- FIX #3: Added a background preload check for custom image IDs 
             local CustomImageTextBox
             CustomImageTextBox = ToggleSection:TextBox({
                 Name = "Custom Image Asset ID",
@@ -1007,13 +1117,11 @@ function Library:Window(title, size, toggleOpts)
                     local testImg = Instance.new("ImageLabel")
                     testImg.Image = formattedId
                     
-                    -- Check validity on a separate thread so it doesn't freeze the game
                     task.spawn(function()
                         local success, err = pcall(function()
                             game:GetService("ContentProvider"):PreloadAsync({testImg})
                         end)
                         
-                        -- If it completely failed or the image did not load at all
                         if not success or not testImg.IsLoaded then
                             Library:Notification({Text = "Invalid Image ID! Reverting.", Duration = 3})
                             
@@ -1068,7 +1176,6 @@ function Library:Window(title, size, toggleOpts)
                     local val = nil
                     if type(v) == "table" then if v.Get then val = v.Get() elseif v.GetState then val = v.GetState() elseif v.GetText then val = v.GetText() end end
                     
-                    -- FIX #1: Corrected "v.G" and "v.B" to "val.G" and "val.B" so saving colors stops erroring out
                     if typeof(val) == "Color3" then val = {val.R * 255, val.G * 255, val.B * 255} end
                     
                     if val ~= nil then data.Flags[k] = val end
@@ -1105,5 +1212,4 @@ function Library:Window(title, size, toggleOpts)
     task.delay(0.1, function() Library:UpdateTheme() end)
     return Window
 end
-
 return Library
