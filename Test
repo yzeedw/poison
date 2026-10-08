@@ -1,67 +1,223 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/yzeedw/poison/refs/heads/main/cool/ui"))()
 local Window = Library:Window("celestial")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- Expanded Entity Table with missing entities integrated
-_G.EntityTable = {
-	Entity = {
-		["FigureRig"]="figure",["FigureRagdoll"]="figure",["SallyMoving"]="sally",["RushMoving"]="rush",["Eyes"]="eyes",
-		["Groundskeeper"]="ground keeper",["BackdoorLookman"]="lookman",["BackdoorRush"]="blitz",
-		["MandrakeLive"]="mandrake",["GloomPile"]="egg",["Snare"]="snare",
-		["MonumentEntity"]="monument",["LiveEntityBramble"]="bramble",["GrumbleRig"]="grumble",
-		["GiggleCeiling"]="giggle",["AmbushMoving"]="ambush",["A60"]="a-60",["A120"]="a-120",
-		["JeffTheKiller"]="jeff",["SeekMovingNewClone"]="seek",["SeekMoving"]="seek",
-		["Alma"]="alma",["Bash"]="bash",["BashMoving"]="bash",["Bob"]="bob",["Creak"]="creak",["Drone"]="drone",
-		["Dread"]="dread",["Dupe"]="dupe",["El Goblino"]="el goblino",["ElGoblino"]="el goblino",
-		["Forget-Me-Not"]="forget-me-not",["ForgetMeNot"]="forget-me-not",["Glitch"]="glitch",
-		["GlitchRush"]="glitch rush",["GlitchAmbush"]="glitch ambush",["Halt"]="halt",
-		["Shade"]="halt",["Haste"]="haste",["Hide"]="hide",["Honcho"]="honcho",["Jack"]="jack",
-		["Louie"]="louie",["Noise"]="noise",["NoiseModel"]="noise",["TV_Stand"]="noise tv",["Portrait"]="portrait",
-		["QueenGrumble"]="queen grumble",["QueenGrumbleRig"]="queen grumble",
-		["Scribbles"]="scribbles",["Stem"]="stem",["StemsEntity"]="balls",["Teller"]="teller",["TellerRig"]="teller",
-		["Timothy"]="timothy",["DronesStampede"]="drones stampede",["Lookman"]="eyes",
-		["GloombatSwarm"]="gloombat swarm",["CustomEntity"]="custom entity",["FrozenAmbush"]="frozen ambush"
+-- Abysall Entity Table Integration
+local Entities = {
+	["TV_Stand"] = {
+		Alias = "Noise_TV",
+		NotifyMessage = { Title = "Noise tv spawned.", Body = "Dont get near it" }
 	},
-	EntityNotify = {
-		RushMoving={"rush","find a hiding spot."},AmbushMoving={"ambush","hide multiple times!"},
-		A60={"a-60","hide immediately!"},A120={"a-120","find a hiding spot!"},
-		JeffTheKiller={"jeff","keep distance and avoid."},
-		SeekMovingNewClone={"seek","run and dodge obstacles!"},SeekMoving={"seek","run and dodge obstacles!"},
-		BackdoorRush={"blitz","find a hiding spot."},GlitchRush={"glitch rush","find a hiding spot."},
-		GlitchAmbush={"glitch ambush","find hiding spot!"},GiggleCeiling={"giggle","avoid it."},
-		Groundskeeper={"ground keeper","don't touch grass"},MonumentEntity={"monument","go a distance n look back."},
-		Alma={"alma","watch out for alma!"},Bash={"bash","get out of the way!"},BashMoving={"bash","find a hiding spot."},Bob={"bob","bob is here."},
-		Creak={"creak","listen closely and move carefully!"},Drone={"drone","avoid the drone's vision!"},
-		Dread={"dread","don't stall in the room too long!"},Dupe={"dupe","check the door number carefully!"},
-		ElGoblino={"el goblino","el goblino is nearby!"},["El Goblino"]={"el goblino","el goblino is nearby!"},
-		["Forget-Me-Not"]={"forget-me-not","stay alert!"},ForgetMeNot={"forget-me-not","stay alert!"},
-		Glitch={"glitch","glitch detected!"},Halt={"halt","follow the movement prompts!"},
-		Shade={"halt","follow the movement prompts!"},Haste={"haste","hurry up!"},
-		Hide={"hide","get out of the closet!"},Honcho={"honcho","beware of honcho!"},
-		Jack={"jack","closet jump scare!"},Louie={"louie","louie is nearby!"},
-		Noise={"noise","be quiet!"},NoiseModel={"noise","don't let it touch you."},
-		TV_Stand={"noise tv","don't get near it."},Portrait={"portrait","watch the painting!"},
-		QueenGrumble={"queen grumble","queen grumble spawned!"},QueenGrumbleRig={"queen grumble","queen grumble spawned!"},
-		Scribbles={"scribbles","watch out for scribbles!"},Stem={"stem","keep away from stem!"},StemsEntity={"balls","balls."},
-		Teller={"teller","listen to the teller!"},TellerRig={"teller","don't worry, he's only annoying."},
-		Timothy={"timothy","spider in container!"},DronesStampede={"drones stampede","find a hiding spot."},
-		Lookman={"eyes","avoid looking at it."},BackdoorLookman={"lookman","avoid looking at its eyes."},
-		GloombatSwarm={"gloombat swarm","keep all light sources turned off."},
-		CustomEntity={"custom entity","find a hiding spot."},FrozenAmbush={"frozen ambush","find a hiding spot."},
-		SallyMoving={"sally","find her horse and rope it."}
+	[LocalPlayer and "MirrorRig_Portrait_" .. LocalPlayer.Name or "Portrait"] = {
+		Alias = "Portrait",
+		NotifyMessage = { Title = "Portrait' has spawned.", Body = "Use him to duplicate items." }
 	},
-	Closet = {["A60"]=190,["A120"]=90,["RushMoving"]=150,["AmbushMoving"]=200,["GlitchRush"]=190,["GlitchAmbush"]=200,["BackdoorRush"]=160}
+	["StemsEntity"] = {
+	    Alias = 'Balls',
+		NotifyMessage = { Title = "Balls", Body = "Balls."}
+	},
+	["NoiseModel"] = {
+		Alias = 'Noise',
+		NotifyMessage = { Title = "Entity 'Noise' has spawned.", Body = "Dont let it touch you." }
+	},
+	["Creak"] = {
+		Alias = "Creak",
+		NotifyMessage = { Title = "Entity 'Creak' has spawned.", Body = "Dont touch him." }
+	},
+	["DronesStampede"] = {
+		Alias = "DronesStampede",
+		NotifyMessage = { Title = "Entity 'Drones Stampede' has spawned.", Body = "Find a hiding spot." }
+	},
+	["TellerRig"] = {
+		Alias = "Teller",
+		NotifyMessage = { Title = "Entity 'Teller' has spawned.", Body = "Dont worry, hes only annoying." }
+	},
+	["Scribbles"] = {
+		Alias = "Scribbles",
+		NotifyMessage = { Title = "Entity 'Scribbles' has spawned.", Body = "Find a hiding spot." }
+	},
+	["BashMoving"] = {
+		Alias = "Bash",
+		NotifyMessage = { Title = "Entity 'Bash' has spawned.", Body = "Find a hiding spot."}
+	},
+	["RushMoving"] = {
+		Alias = "Rush",
+		NotifyMessage = { Title = "Entity 'Rush' has spawned.", Body = "Find a hiding spot." }
+	},
+	["AmbushMoving"] = {
+		Alias = "Ambush",
+		NotifyMessage = { Title = "Entity 'Ambush' has spawned.", Body = "Find a hiding spot." }
+	},
+	["Eyes"] = {
+		Alias = "Eyes",
+		NotifyMessage = { Title = "Entity 'Eyes' has spawned.", Body = "Avoid looking at it." }
+	},
+	["Lookman"] = {
+		Alias = "Eyes",
+		NotifyMessage = { Title = "Entity 'Eyes' has spawned.", Body = "Avoid looking at it." }
+	},
+	["BackdoorRush"] = {
+		Alias = "Blitz",
+		NotifyMessage = { Title = "Entity 'Blitz' has spawned.", Body = "Find a hiding spot." }
+	},
+	["BackdoorLookman"] = {
+		Alias = "Lookman",
+		NotifyMessage = { Title = "Entity 'Lookman' has spawned.", Body = "Avoid looking at its eyes." }
+	},
+	["Groundskeeper"] = {
+		Alias = "Groundskeeper",
+		NotifyMessage = { Title = "Entity 'Groundskeeper' has spawned.", Body = "Avoid stepping on the grass." }
+	},
+	["A60"] = {
+		Alias = "A-60",
+		NotifyMessage = { Title = "Entity 'A-60' has spawned.", Body = "Find a hiding spot." }
+	},
+	["A120"] = {
+		Alias = "A-120",
+		NotifyMessage = { Title = "Entity 'A-120' has spawned.", Body = "Find a hiding spot." }
+	},
+	["GloombatSwarm"] = {
+		Alias = "Gloombat Swarm",
+		NotifyMessage = { Title = "Entity 'Gloombat Swarm' has spawned.", Body = "Keep all light sources turned off." }
+	},
+	["GlitchRush"] = {
+		Alias = "RNIUSHCG==",
+		NotifyMessage = { Title = "Entity 'RNIUSHCG==' has spawned.", Body = "Find a hiding spot." }
+	},
+	["GlitchAmbush"] = {
+		Alias = "AR0xMBUSH",
+		NotifyMessage = { Title = "Entity 'AR0xMBUSH' has spawned.", Body = "Find a hiding spot." }
+	},
+	["MonumentEntity"] = {
+		Alias = "Monument",
+		NotifyMessage = { Title = "Entity 'Monument' has spawned.", Body = "It can't move while you are looking at it." }
+	},
+	["JeffTheKiller"] = {
+		Alias = "Jeff the Killer",
+		NotifyMessage = { Title = "Entity 'Jeff the Killer' has spawned.", Body = "Avoid touching him." }
+	},
+	["CustomEntity"] = {
+		Alias = "Custom Entity",
+		NotifyMessage = { Title = "Entity 'Custom Entity' has spawned.", Body = "Find a hiding spot." }
+	},
+	["FrozenAmbush"] = {
+		Alias = "Frozen Ambush",
+		NotifyMessage = { Title = "Entity 'Frozen Ambush' has spawned.", Body = "Find a hiding spot." }
+	},
+	["SallyMoving"] = {
+		Alias = "Sally",
+		NotifyMessage = { Title = "Entity 'Sally' has spawned.", Body = "Find her horse and rop it." }
+	},
+	["SeekMovingNewClone"] = {
+		Alias = "Seek",
+		NotifyMessage = { Title = "Entity 'Seek' has spawned.", Body = "Run and dodge obstacles!" }
+	},
+	["SeekMoving"] = {
+		Alias = "Seek",
+		NotifyMessage = { Title = "Entity 'Seek' has spawned.", Body = "Run and dodge obstacles!" }
+	},
+	["Halt"] = {
+		Alias = "Halt",
+		NotifyMessage = { Title = "Entity 'Halt' has spawned.", Body = "Follow the movement prompts!" }
+	},
+	["Shade"] = {
+		Alias = "Halt",
+		NotifyMessage = { Title = "Entity 'Halt' has spawned.", Body = "Follow the movement prompts!" }
+	},
+	["Dread"] = {
+		Alias = "Dread",
+		NotifyMessage = { Title = "Entity 'Dread' has spawned.", Body = "Don't stall in the room too long!" }
+	},
+	["FigureRig"] = { Alias = "Figure" },
+	["FigureRagdoll"] = { Alias = "Figure" }
 }
+
+-- Abysall Item Table Integration
+local ItemNames = {
+	["AbrahamHat"]        = "Hat",
+	["LargeScrew"]        = "Screw",
+	["DinkyLamp"]         = "Lamp",
+	["BottleCrate"]       = "18+ Bottles",
+	["GweenSodaPack"]     = "Gween Soda Pack",
+	["BrokenMonitor"]     = "Broken Monitor",
+	["JerryCan"]          = "Jerry Can",
+ 	["SallyToyObtain"]    = "Sally Toy",
+	["Leftovers"]         = "Lunch Box",
+	["HoneyPot"]          = "Honey Pot",
+	["FihFlakes"]         = "Fih Food",
+	["SecretCD"]          = "CD Disc",
+	["Pizza"]             = "Pizza",
+	["PaperPlanePickup"]  = "Paper Plane",
+	["Lighter"]           = "Lighter",
+	["Flashlight"]        = "Flashlight",
+	["Lockpick"]          = "Lockpicks",
+	["Vitamins"]          = "Vitamins",
+	["Bandage"]           = "Bandage",
+	["StarVial"]          = "Starlight Vial",
+	["StarBottle"]        = "Starlight Bottle",
+	["StarJug"]           = "Starlight Barrel",
+	["Shakelight"]        = "Gummy Flashlight",
+	["Straplight"]        = "Straplight",
+	["Bulklight"]         = "Spotlight",
+	["Battery"]           = "Battery",
+	["Candle"]            = "Candle",
+	["Crucifix"]          = "Crucifix",
+	["CrucifixWall"]      = "Crucifix",
+	["Glowsticks"]        = "Glowstick",
+	["SkeletonKey"]       = "Skeleton Key",
+	["Candy"]             = "Candy",
+	["ShieldMini"]        = "Mini Shield Potion",
+	["ShieldBig"]         = "Big Shield Potion",
+	["BandagePack"]       = "Bandage Pack",
+	["BatteryPack"]       = "Battery Pack",
+	["RiftCandle"]        = "Moonlight Candle",
+	["LaserPointer"]      = "Laser Pointer",
+	["HolyGrenade"]       = "Holy Hand Grenade",
+	["Shears"]            = "Shears",
+	["Smoothie"]          = "Smoothie",
+	["Cheese"]            = "Cheese",
+	["Bread"]             = "Bread",
+	["AlarmClock"]        = "Alarm Clock",
+	["RiftSmoothie"]      = "Moonlight Smoothie",
+	["GweenSoda"]         = "Gween Soda",
+	["GlitchCube"]        = "Glitch Fragment",
+	["Scanner"]           = "Tablet",
+	["Bomb"]              = "Bomb",
+	["Knockbomb"]         = "Knockbomb",
+	["Nanner"]            = "Nanner",
+	["BigBomb"]           = "Big Bomb",
+	["SnakeBox"]          = "Hiding Box",
+	["GoldGun"]           = "Golden Gun",
+	["StopSign"]          = "Stop Sign",
+	["TipJar"]            = "Tip Jar",
+	["Lantern"]           = "Lantern",
+	["IronKey"]           = "Iron Key",
+	["LotusPetal"]        = "Lotus Petal",
+	["Compass"]           = "Compass",
+	["LotusPetalPickup"]  = "Lotus Petal",
+	["LanternLitItem"]    = "Lantern",
+	["KeyIron"]           = "Iron Key",
+	["IronKeyForCrypt"]   = "Iron Key",
+	["LotusHolder"]       = "Lotus Petal",
+	["Multitool"]         = "Multitool",
+	["RiftJar"]           = "Rift Jar",
+	["AloeVera"]          = "Aloe Vera",
+	["Donut"]             = "Donut",
+	["Lotus"]             = "Lotus",
+	["BoxingGloves"]      = "Boxing Gloves"
+}
+
+local ClosetTargets = {["A60"]=190,["A120"]=90,["RushMoving"]=150,["AmbushMoving"]=200,["GlitchRush"]=190,["GlitchAmbush"]=200,["BackdoorRush"]=160}
 
 function EntityFond()
 	for _, v in pairs(workspace:GetChildren()) do
-		for j in pairs(_G.EntityTable.Closet) do
+		for j in pairs(ClosetTargets) do
 			if v.Name == j and v.PrimaryPart then return v end
 		end
 	end
 end
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
@@ -212,28 +368,32 @@ Toggles.BypassNoise:OnChanged(function(value)
 
 	if not value then return end
 
-	local function checkBypassNoise(target)
-		if not target or not target:IsA("Model") then return end
-		local name = target.Name
-		if name == "TV_Stand" or name == "NoiseModel" or name == "Noise" then
-			local tvStandCurrentCFrame = target:GetPivot()
-			if tvStandCurrentCFrame.Position.Y > -119 then
-				target:PivotTo(CFrame.new(
-					tvStandCurrentCFrame.Position.X,
-					-120,
-					tvStandCurrentCFrame.Position.Z
-				))
-			end
+	local function checkBypassNoiseTvStand(targetTvStand)
+		if not targetTvStand:IsA("Model") then return end
+		if targetTvStand.Name ~= "TV_Stand" then return end
+
+		local tvStandCurrentCFrame = targetTvStand:GetPivot()
+
+		if tvStandCurrentCFrame.Position.Y > -119 then
+			targetTvStand:PivotTo(CFrame.new(
+				tvStandCurrentCFrame.Position.X,
+				-120,
+				tvStandCurrentCFrame.Position.Z
+			))
 		end
 	end
 
-	local noiseConn = workspace.DescendantAdded:Connect(function(child)
-		checkBypassNoise(child)
-	end)
-	Connections[#Connections + 1] = noiseConn
+	local bypassNoiseMiscFolder = workspace:FindFirstChild("Misc")
+	if not bypassNoiseMiscFolder then return end
 
-	for _, desc in ipairs(workspace:GetDescendants()) do
-		checkBypassNoise(desc)
+	local bypassNoiseMiscChildAddedConnection = bypassNoiseMiscFolder.ChildAdded:Connect(function(bypassNoiseNewChild)
+		checkBypassNoiseTvStand(bypassNoiseNewChild)
+	end)
+
+	Connections[#Connections + 1] = bypassNoiseMiscChildAddedConnection
+
+	for _, bypassNoiseMiscChild in ipairs(bypassNoiseMiscFolder:GetChildren()) do
+		checkBypassNoiseTvStand(bypassNoiseMiscChild)
 	end
 end)
 
@@ -663,81 +823,6 @@ local ESPMonsters, ESPPlayers, ESPBooks, ESPWardrobes = false, false, false, fal
 local ESPOptimized, ESPOptimizationMethod, ThirdPersonEnabled = false, "default", false
 local monsterNotifyConn, ShowTimerConnection = nil, nil
 
--- Complete Item Mapping from Abyssal
-local ItemNames = {
-	["AbrahamHat"]        = "Hat",
-	["LargeScrew"]        = "Screw",
-	["DinkyLamp"]         = "Lamp",
-	["BottleCrate"]       = "18+ Bottles",
-	["GweenSodaPack"]     = "Gween Soda Pack",
-	["BrokenMonitor"]     = "Broken Monitor",
-	["JerryCan"]          = "Jerry Can",
-	["SallyToyObtain"]    = "Sally Toy",
-	["Leftovers"]         = "Lunch Box",
-	["HoneyPot"]          = "Honey Pot",
-	["FihFlakes"]         = "Fih Food",
-	["SecretCD"]          = "CD Disc",
-	["Pizza"]             = "Pizza",
-	["PaperPlanePickup"]  = "Paper Plane",
-	["Lighter"]           = "Lighter",
-	["Flashlight"]        = "Flashlight",
-	["Lockpick"]          = "Lockpicks",
-	["Vitamins"]          = "Vitamins",
-	["Bandage"]           = "Bandage",
-	["StarVial"]          = "Starlight Vial",
-	["StarBottle"]        = "Starlight Bottle",
-	["StarJug"]           = "Starlight Barrel",
-	["Shakelight"]        = "Gummy Flashlight",
-	["Straplight"]        = "Straplight",
-	["Bulklight"]         = "Spotlight",
-	["Battery"]           = "Battery",
-	["Candle"]            = "Candle",
-	["Crucifix"]          = "Crucifix",
-	["CrucifixWall"]      = "Crucifix",
-	["Glowsticks"]        = "Glowstick",
-	["SkeletonKey"]       = "Skeleton Key",
-	["Candy"]             = "Candy",
-	["ShieldMini"]        = "Mini Shield Potion",
-	["ShieldBig"]         = "Big Shield Potion",
-	["BandagePack"]       = "Bandage Pack",
-	["BatteryPack"]       = "Battery Pack",
-	["RiftCandle"]        = "Moonlight Candle",
-	["LaserPointer"]      = "Laser Pointer",
-	["HolyGrenade"]       = "Holy Hand Grenade",
-	["Shears"]            = "Shears",
-	["Smoothie"]          = "Smoothie",
-	["Cheese"]            = "Cheese",
-	["Bread"]             = "Bread",
-	["AlarmClock"]        = "Alarm Clock",
-	["RiftSmoothie"]      = "Moonlight Smoothie",
-	["GweenSoda"]         = "Gween Soda",
-	["GlitchCube"]        = "Glitch Fragment",
-	["Scanner"]           = "Tablet",
-	["Bomb"]              = "Bomb",
-	["Knockbomb"]         = "Knockbomb",
-	["Nanner"]            = "Nanner",
-	["BigBomb"]           = "Big Bomb",
-	["SnakeBox"]          = "Hiding Box",
-	["GoldGun"]           = "Golden Gun",
-	["StopSign"]          = "Stop Sign",
-	["TipJar"]            = "Tip Jar",
-	["Lantern"]           = "Lantern",
-	["IronKey"]           = "Iron Key",
-	["LotusPetal"]        = "Lotus Petal",
-	["Compass"]           = "Compass",
-	["LotusPetalPickup"]  = "Lotus Petal",
-	["LanternLitItem"]    = "Lantern",
-	["KeyIron"]           = "Iron Key",
-	["IronKeyForCrypt"]   = "Iron Key",
-	["LotusHolder"]       = "Lotus Petal",
-	["Multitool"]         = "Multitool",
-	["RiftJar"]           = "Rift Jar",
-	["AloeVera"]          = "Aloe Vera",
-	["Donut"]             = "Donut",
-	["Lotus"]             = "Lotus",
-	["BoxingGloves"]      = "Boxing Gloves"
-}
-
 local trackedBooks, trackedWardrobes, trackedKeys, trackedLevers = {}, {}, {}, {}
 local trackedFigure, trackedItems, trackedDoors, trackedMonsters, trackedPlayers = {}, {}, {}, {}, {}
 
@@ -767,7 +852,7 @@ local function isPartInSkippedRoom(part)
 end
 
 local function getRoomsToScan(currentRooms)
-	if not ESPOptimized or not currentRooms then return currentRooms and currentRooms:GetChildren() or {} end
+	if not ESPOptimized then return currentRooms:GetChildren() end
 	local latestRoom = getLatestRoomNumber()
 	local validRooms = {}
 	for _, room in ipairs(currentRooms:GetChildren()) do
@@ -922,32 +1007,20 @@ local function CodeAll(v)
 	end
 end
 
--- Abyssal Item ESP Logic Implementation
 local function findItems(currentRooms)
 	if not ESPItems then if #trackedItems > 0 then clearTrackedGroup(trackedItems) end return end
 	pruneTracked(trackedItems)
-
-	local containers = {}
-	if currentRooms then
-		for _, room in ipairs(getRoomsToScan(currentRooms)) do
-			table.insert(containers, room)
-		end
-	end
-	local drops = Workspace:FindFirstChild("Drops")
-	if drops then table.insert(containers, drops) end
-
-	for _, container in ipairs(containers) do
-		for _, desc in ipairs(container:GetDescendants()) do
-			local mappedName = ItemNames[desc.Name]
-			if mappedName then
+	for _, room in ipairs(getRoomsToScan(currentRooms)) do
+		for _, desc in ipairs(room:GetDescendants()) do
+			local itemName = ItemNames[desc.Name]
+			if itemName then
 				local obtainable = desc:FindFirstChildWhichIsA("ProximityPrompt", true) ~= nil
 					or (desc.Parent and desc.Parent:FindFirstChildWhichIsA("ProximityPrompt"))
 					or desc:IsA("Tool")
-					or desc.Parent == drops
 				if obtainable then
 					local part = desc:IsA("BasePart") and desc or desc.PrimaryPart or desc:FindFirstChild("Handle") or desc:FindFirstChildWhichIsA("BasePart")
 					if part and part:IsA("BasePart") and not isPartInSkippedRoom(part) and not ActiveESP[part] then
-						ApplyESP(part, Color3.fromRGB(255,0,255), mappedName:lower())
+						ApplyESP(part, Color3.fromRGB(255,0,255), itemName:lower())
 						table.insert(trackedItems, part)
 					end
 				end
@@ -959,7 +1032,6 @@ end
 local function findBooks(currentRooms)
 	if not ESPBooks then if #trackedBooks > 0 then clearTrackedGroup(trackedBooks) end return end
 	pruneTracked(trackedBooks)
-	if not currentRooms then return end
 	local room50 = currentRooms:FindFirstChild("50")
 	if room50 then
 		local assets = room50:FindFirstChild("Assets")
@@ -993,17 +1065,14 @@ local function findBooks(currentRooms)
 end
 
 local function getEntityDisplayName(rawName)
-	if _G.EntityTable.Entity[rawName] then
-		return _G.EntityTable.Entity[rawName]
-	end
-	if string.find(rawName, "MirrorRig_Portrait_") or string.find(rawName, "Portrait") then
-		return "portrait"
+	if Entities[rawName] then
+		return Entities[rawName].Alias
 	end
 	local lowerRaw = string.lower(tostring(rawName))
-	for key, dispName in pairs(_G.EntityTable.Entity) do
+	for key, data in pairs(Entities) do
 		local lowerKey = string.lower(key)
 		if string.find(lowerRaw, lowerKey, 1, true) or string.find(lowerKey, lowerRaw, 1, true) then
-			return dispName
+			return data.Alias
 		end
 	end
 	return nil
@@ -1012,7 +1081,6 @@ end
 local function findFigure(currentRooms)
 	if not ESPMonsters then if #trackedFigure > 0 then clearTrackedGroup(trackedFigure) end return end
 	pruneTracked(trackedFigure)
-	if not currentRooms then return end
 	for _, rn in ipairs({"50","100"}) do
 		local room = currentRooms:FindFirstChild(rn)
 		if room then
@@ -1026,7 +1094,7 @@ local function findFigure(currentRooms)
 					end)
 					local hb = fr:FindFirstChild("Hitbox") or fr.PrimaryPart or fr:FindFirstChild("HumanoidRootPart")
 					if hb and hb:IsA("BasePart") and not isPartInSkippedRoom(hb) and not ActiveESP[hb] then
-						ApplyESP(hb, Color3.fromRGB(255,0,0), (_G.EntityTable.Entity["FigureRig"] or "figure"):lower())
+						ApplyESP(hb, Color3.fromRGB(255,0,0), getEntityDisplayName("FigureRig"):lower() or "figure")
 						table.insert(trackedFigure, hb)
 					end
 				end
@@ -1038,7 +1106,6 @@ end
 local function findWardrobes(currentRooms)
 	if not ESPWardrobes then if #trackedWardrobes > 0 then clearTrackedGroup(trackedWardrobes) end return end
 	pruneTracked(trackedWardrobes)
-	if not currentRooms then return end
 	for _, room in ipairs(getRoomsToScan(currentRooms)) do
 		local assets = room:FindFirstChild("Assets")
 		if assets then
@@ -1058,7 +1125,6 @@ end
 local function findKeys(currentRooms)
 	if not ESPKeys then if #trackedKeys > 0 then clearTrackedGroup(trackedKeys) end return end
 	pruneTracked(trackedKeys)
-	if not currentRooms then return end
 	for _, room in ipairs(getRoomsToScan(currentRooms)) do
 		local assets = room:FindFirstChild("Assets")
 		if assets then
@@ -1078,7 +1144,6 @@ end
 local function findLevers(currentRooms)
 	if not ESPLevers then if #trackedLevers > 0 then clearTrackedGroup(trackedLevers) end return end
 	pruneTracked(trackedLevers)
-	if not currentRooms then return end
 	for _, room in ipairs(getRoomsToScan(currentRooms)) do
 		local assets = room:FindFirstChild("Assets")
 		if assets then
@@ -1117,37 +1182,21 @@ local function updateESP()
 		end
 		if ESPMonsters then
 			pruneTracked(trackedMonsters)
-			local potentialMonsters = {}
-			for _, child in ipairs(Workspace:GetChildren()) do
-				if child:IsA("Model") then table.insert(potentialMonsters, child) end
-			end
-			local misc = Workspace:FindFirstChild("Misc")
-			if misc then
-				for _, child in ipairs(misc:GetChildren()) do
-					if child:IsA("Model") then table.insert(potentialMonsters, child) end
-				end
-			end
-			if currentRooms then
-				for _, room in ipairs(getRoomsToScan(currentRooms)) do
-					for _, desc in ipairs(room:GetChildren()) do
-						if desc:IsA("Model") then table.insert(potentialMonsters, desc) end
-					end
-				end
-			end
-
-			for _, monster in ipairs(potentialMonsters) do
-				local mn = getEntityDisplayName(monster.Name)
-				if mn then
-					if monster.Name == "FigureRig" or monster.Name == "FigureRagdoll" then
-						pcall(function()
-							local root = monster:FindFirstChild("Root")
-							if root then root.Size = Vector3.new(0.001, 0.001, 0.001) end
-						end)
-					end
-					local part = monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChild("Hitbox") or monster:FindFirstChildWhichIsA("BasePart")
-					if part and not isPartInSkippedRoom(part) and not ActiveESP[part] then
-						ApplyESP(part, Color3.fromRGB(255,0,0), mn:lower())
-						table.insert(trackedMonsters, part)
+			for _, monster in ipairs(Workspace:GetChildren()) do
+				if monster:IsA("Model") then
+					local mn = getEntityDisplayName(monster.Name)
+					if mn then
+						if monster.Name == "FigureRig" or monster.Name == "FigureRagdoll" then
+							pcall(function()
+								local root = monster:FindFirstChild("Root")
+								if root then root.Size = Vector3.new(0.001, 0.001, 0.001) end
+							end)
+						end
+						local part = monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChild("Hitbox") or monster:FindFirstChildWhichIsA("BasePart")
+						if part and not isPartInSkippedRoom(part) and not ActiveESP[part] then
+							ApplyESP(part, Color3.fromRGB(255,0,0), mn:lower())
+							table.insert(trackedMonsters, part)
+						end
 					end
 				end
 			end
@@ -1543,56 +1592,55 @@ AutomationSection:Dropdown({Name="breaker mode", Options={"instant","legit"}, De
 Tog(MinesSection, "auto minecart", Toggles.AutoMinecart)
 Tog(MinesSection, "auto anchor solver", Toggles.AutoAnchorSolver)
 
--- Monster Notification Listener Logic Fixed for Stairwell and Subfolders
-local notifiedEntities = setmetatable({}, {__mode = "k"})
-local lastDroneSpawnTime = 0
+-- Monster Notification & Alert Listener Logic with Abysall Duplicate Check Logic
 local lastPortraitNotify = 0
+local notifiedEntities = setmetatable({}, {__mode = "k"})
 
 AlertsSection:Toggle({Name="monster notification", Default=false, Callback=function(v)
 	if v then
-		local function checkAndNotify(child)
-			if not child or not child:IsA("Model") then return end
-			if notifiedEntities[child] then return end
-
+		monsterNotifyConn = Workspace.ChildAdded:Connect(function(child)
+			task.wait(0.1)
 			local rawName = child.Name
-			if string.find(rawName, "MirrorRig_Portrait_") then rawName = "Portrait" end
+			local entityData = Entities[rawName]
 
-			local nd = _G.EntityTable.EntityNotify[rawName]
-			local dispName = getEntityDisplayName(rawName)
-
-			if not nd and not dispName then return end
-
-			if rawName == "Drone" or rawName == "DronesStampede" or (dispName and dispName:lower():find("drone")) then
-				if tick() - lastDroneSpawnTime < 3 then return end
-				lastDroneSpawnTime = tick()
-			elseif rawName == "Portrait" or (dispName and dispName:lower() == "portrait") then
-				if tick() - lastPortraitNotify < 10 then return end
-				lastPortraitNotify = tick()
-			end
-
-			notifiedEntities[child] = true
-
-			if nd then
-				playAlertSound()
-				Library:Notification({Text = nd[1]:lower() .. ": " .. nd[2]:lower(), Duration = 6})
-			elseif dispName then
-				playAlertSound()
-				Library:Notification({Text = "alert: " .. dispName:lower() .. " spawned!", Duration = 5})
-			end
-		end
-
-		for _, desc in ipairs(workspace:GetDescendants()) do
-			if desc:IsA("Model") then
-				checkAndNotify(desc)
-			end
-		end
-
-		monsterNotifyConn = workspace.DescendantAdded:Connect(function(child)
-			task.delay(0.05, function()
-				if child and child.Parent then
-					checkAndNotify(child)
+			-- Fuzzy search if exact match doesn't pull
+			if not entityData then
+				local lowerRaw = string.lower(tostring(rawName))
+				for key, data in pairs(Entities) do
+					if string.find(lowerRaw, string.lower(key), 1, true) then
+						entityData = data
+						break
+					end
 				end
-			end)
+			end
+
+			if entityData then
+				-- Exact same duplication avoidance like Abysall
+				if child:GetAttribute("AlreadyNotified") or notifiedEntities[child] then
+					return
+				end
+				
+				if entityData.Alias == "Portrait" then
+					if tick() - lastPortraitNotify < 10 then
+						return
+					end
+					lastPortraitNotify = tick()
+				end
+
+				child:SetAttribute("AlreadyNotified", true)
+				notifiedEntities[child] = true
+				
+				if entityData.NotifyMessage then
+					playAlertSound()
+					Library:Notification({
+						Text = entityData.NotifyMessage.Title:lower() .. " - " .. entityData.NotifyMessage.Body:lower(),
+						Duration = 6
+					})
+				elseif entityData.Alias then
+					playAlertSound()
+					Library:Notification({Text = "alert: " .. entityData.Alias:lower() .. " spawned!", Duration = 5})
+				end
+			end
 		end)
 	else
 		if monsterNotifyConn then monsterNotifyConn:Disconnect(); monsterNotifyConn = nil end
@@ -1692,116 +1740,58 @@ ResetSection:Button({Name='reset character', Callback=function()
 	end
 end})
 
-if isHotel then
-	MiscSection:Toggle({Name="auto get code library", Default=false, Callback=function(v)
-		_G.NotifyEntity = v
-		if v then
-			if LocalPlayer.Character then Getpaper = LocalPlayer.Character.ChildAdded:Connect(CodeAll) end
-		else
-			if Getpaper then Getpaper:Disconnect(); Getpaper = nil end
-		end
-	end})
-	MiscSection:Toggle({Name="auto send code to chat", Default=false, Callback=function(v) _G.NotifyEntityChat = v end})
-end
-
-EspSection:Toggle({Name="optimize esp", Default=false, Callback=function(v)
-	ESPOptimized = v
-	if v then showNotification("esp optimized (" .. ESPOptimizationMethod .. ")") end
-end})
-EspSection:Dropdown({Name="optimize esp method", Options={"default","onscreen"}, Default="default", Callback=function(v) ESPOptimizationMethod = v:lower() end})
-EspSection:Toggle({Name="door esp", Default=false, Callback=function(v) ESPDoors = v; if not v then clearTrackedGroup(trackedDoors) end end})
-EspSection:Toggle({Name="key esp", Default=false, Callback=function(v) ESPKeys = v; if not v then clearTrackedGroup(trackedKeys) end end})
-EspSection:Toggle({Name="items esp", Default=false, Callback=function(v) ESPItems = v; if not v then clearTrackedGroup(trackedItems) end end})
-EspSection:Toggle({Name="lever esp", Default=false, Callback=function(v) ESPLevers = v; if not v then clearTrackedGroup(trackedLevers) end end})
-EspSection:Toggle({Name="closet esp", Default=false, Callback=function(v) ESPWardrobes = v; if not v then clearTrackedGroup(trackedWardrobes) end end})
-EspSection:Toggle({Name="book/fuses esp", Default=false, Callback=function(v) ESPBooks = v; if not v then clearTrackedGroup(trackedBooks) end end})
-EspSection:Toggle({Name="monster esp", Default=false, Callback=function(v) ESPMonsters = v; if not v then clearTrackedGroup(trackedFigure); clearTrackedGroup(trackedMonsters) end end})
-EspSection:Toggle({Name="player esp", Default=false, Callback=function(v) ESPPlayers = v; if not v then clearTrackedGroup(trackedPlayers) end end})
-EspSection:Toggle({Name="show seek path", Default=false, Callback=function(v)
+EspSection:Toggle({Name="optimize esp", Default=false, Callback=function(v) ESPOptimized = v end})
+EspSection:Dropdown({Name="optimization method", Options={"default","onscreen"}, Default="default", Callback=function(v) ESPOptimizationMethod = v end})
+EspSection:Toggle({Name="doors", Default=false, Callback=function(v) ESPDoors = v; if not v then clearTrackedGroup(trackedDoors) end end})
+EspSection:Toggle({Name="keys", Default=false, Callback=function(v) ESPKeys = v; if not v then clearTrackedGroup(trackedKeys) end end})
+EspSection:Toggle({Name="items", Default=false, Callback=function(v) ESPItems = v; if not v then clearTrackedGroup(trackedItems) end end})
+EspSection:Toggle({Name="books/fuses", Default=false, Callback=function(v) ESPBooks = v; if not v then clearTrackedGroup(trackedBooks) end end})
+EspSection:Toggle({Name="levers", Default=false, Callback=function(v) ESPLevers = v; if not v then clearTrackedGroup(trackedLevers) end end})
+EspSection:Toggle({Name="monsters", Default=false, Callback=function(v) ESPMonsters = v; if not v then clearTrackedGroup(trackedMonsters); clearTrackedGroup(trackedFigure) end end})
+EspSection:Toggle({Name="closets", Default=false, Callback=function(v) ESPWardrobes = v; if not v then clearTrackedGroup(trackedWardrobes) end end})
+EspSection:Toggle({Name="players", Default=false, Callback=function(v) ESPPlayers = v; if not v then clearTrackedGroup(trackedPlayers) end end})
+EspSection:Toggle({Name="seek path", Default=false, Callback=function(v)
 	Toggles.ShowSeekPath = v
-	if v then
-		local cr = Workspace:FindFirstChild("CurrentRooms")
-		if cr then for _, d in ipairs(cr:GetDescendants()) do if d.Name == "SeekGuidingLight" then ShowSeekPath(d) end end end
+	if not v then
+		for _, x in ipairs(Globals.SeekPathFolder:GetChildren()) do x:Destroy() end
+		for _, p in pairs(Objects.SeekHighlights) do p:Destroy() end
+		table.clear(Objects.SeekHighlights)
 	else
-		Globals.SeekPathFolder:ClearAllChildren()
+		for _, x in ipairs(Workspace:GetDescendants()) do if x.Name == "SeekGuidingLight" then ShowSeekPath(x) end end
+		for _, node in ipairs(Globals.SeekNodesFolder:GetChildren()) do
+			local hl = Instance.new("Highlight")
+			hl.Parent, hl.Adornee = node, node
+			hl.FillColor, hl.OutlineColor = Color3.fromRGB(0,255,255), Color3.fromRGB(0,255,255)
+			hl.FillTransparency, hl.OutlineTransparency = 0.5, 0.2
+			table.insert(Objects.SeekHighlights, hl)
+		end
 	end
 end})
-EspSection:Toggle({Name="show eyestalk path", Default=false, Callback=function(v) Toggles.ShowEyestalkPath = v; UpdateBeamVisibility(Objects.EyestalkHighlights, v) end})
+EspSection:Toggle({Name="eyestalk path", Default=false, Callback=function(v)
+	Toggles.ShowEyestalkPath = v
+	if not v then
+		for _, p in pairs(Objects.EyestalkHighlights) do p:Destroy() end
+		table.clear(Objects.EyestalkHighlights)
+	else
+		for _, node in ipairs(Globals.RoomsNodesFolder:GetChildren()) do
+			local hl = Instance.new("Highlight")
+			hl.Parent, hl.Adornee = node, node
+			hl.FillColor, hl.OutlineColor = Color3.fromRGB(0,255,0), Color3.fromRGB(0,255,0)
+			hl.FillTransparency, hl.OutlineTransparency = 0.5, 0.2
+			table.insert(Objects.EyestalkHighlights, hl)
+		end
+	end
+end})
 
+local LightingObjects = {Ambience=Lighting.Ambient, FullBright=false}
 LightingSection:Toggle({Name="fullbright", Default=false, Callback=function(v)
-	if v then
-		Lighting.Brightness, Lighting.ClockTime, Lighting.FogEnd = 2, 14, 9e9
-		Lighting.GlobalShadows, Lighting.ShadowSoftness = false, 0
-		Lighting.OutdoorAmbient, Lighting.Ambient = Color3.new(1,1,1), Color3.new(1,1,1)
-	else
-		Lighting.Brightness, Lighting.ClockTime, Lighting.FogEnd = 1, 0, 100000
-		Lighting.GlobalShadows = true
-		Lighting.OutdoorAmbient, Lighting.Ambient = Color3.new(0.5,0.5,0.5), Color3.new(0.4,0.4,0.5)
-	end
-end})
-LightingSection:Toggle({Name="anti lag", Default=false, Callback=function(v)
-	local cr = workspace:FindFirstChild("CurrentRooms")
-	if cr then
-		for _, p in cr:GetDescendants() do
-			if p:IsA("BasePart") then
-				if v then p:SetAttribute("Mat", p.Material); p.Material = Enum.Material.Plastic
-				elseif p:GetAttribute("Mat") then p.Material = p:GetAttribute("Mat") or Enum.Material.Plastic end
-			end
-		end
-	end
+	LightingObjects.FullBright = v
+	if v then Lighting.Ambient = Color3.new(1,1,1) else Lighting.Ambient = LightingObjects.Ambience end
 end})
 
-local CurrentRooms = Workspace:FindFirstChild("CurrentRooms") or Workspace:WaitForChild("CurrentRooms")
-Connections.RoomsHandler = CurrentRooms.ChildAdded:Connect(function(Room)
-	for _, obj in ipairs(Globals.RoomsNodesFolder:GetChildren()) do
-		if obj.Name == "StuckPart" then obj:Destroy() end
-	end
-	if Room:GetAttribute("RawName") and string.find(Room:GetAttribute("RawName"), "Eyestalk") then
-		local PreviousNode
-		local function CreateEyestalkNode(pos)
-			local NewNode = Instance.new("Part")
-			NewNode.Size, NewNode.Transparency, NewNode.Anchored = Vector3.one, 1, true
-			NewNode.Position, NewNode.CanCollide, NewNode.Name = pos, false, "SeekLightNode"
-			NewNode.Parent = Globals.SeekNodesFolder
-			local PrevNode = PreviousNode or NewNode
-			PreviousNode = NewNode
-			local NewBeam = Instance.new("Beam")
-			NewBeam.Color = ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(0,255,0)), ColorSequenceKeypoint.new(1,Color3.fromRGB(0,255,0))})
-			NewBeam.FaceCamera, NewBeam.Width0, NewBeam.Width1 = true, 0.2, 0.2
-			NewBeam.Brightness, NewBeam.LightInfluence, NewBeam.LightEmission, NewBeam.Enabled = 10, 0, 0, true
-			local Vis = Toggles.ShowEyestalkPath and 0 or 1
-			NewBeam.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,Vis), NumberSequenceKeypoint.new(1,Vis)})
-			NewBeam.Parent = Globals.SeekNodesFolder
-			local A0, A1 = Instance.new("Attachment", NewNode), Instance.new("Attachment", PrevNode)
-			NewBeam.Attachment0, NewBeam.Attachment1 = A0, A1
-			table.insert(Objects.EyestalkHighlights, NewBeam)
-		end
-		Room:WaitForChild("RoomEntrance", 9e9)
-		Room:WaitForChild("RoomExit", 9e9)
-		while not Room:GetAttribute("PathFound") do
-			if Toggles.ShowEyestalkPath then
-				local rp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-				if rp then
-					local EyePath = PathfindingService:CreatePath({AgentCanJump=false,AgentCanClimb=false,WaypointSpacing=2,AgentRadius=1,AgentHeight=1})
-					EyePath:ComputeAsync(rp.Position, Room.RoomExit.Position)
-					if EyePath.Status == Enum.PathStatus.Success then
-						Room:SetAttribute("PathFound", true)
-						for _, wp in EyePath:GetWaypoints() do CreateEyestalkNode(wp.Position); task.wait() end
-						break
-					end
-				end
-			end
-			task.wait(0.25)
-		end
+Lighting:GetPropertyChangedSignal("Ambient"):Connect(function()
+	if LightingObjects.FullBright then
+		if Lighting.Ambient ~= Color3.new(1,1,1) then LightingObjects.Ambience = Lighting.Ambient end
+		Lighting.Ambient = Color3.new(1,1,1)
 	end
 end)
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-	task.wait(1)
-	if _G.NotifyEntity then
-		if Getpaper then Getpaper:Disconnect() end
-		Getpaper = char.ChildAdded:Connect(CodeAll)
-	end
-end)
-
-Library:Notification({Text = "celestial loaded", Duration = 5})
