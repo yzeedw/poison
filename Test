@@ -795,13 +795,21 @@ local function isLatestRoom(room)
 	local roomNum = tonumber(room.Name)
 	local latestNum = tonumber(LatestRoom.Value) or 0
 	if roomNum then
-		return roomNum >= latestNum
+		return roomNum >= math.max(0, latestNum - 2)
 	end
 	return true
 end
 
-local function isPartInLatestRoom(part)
+local function isPartInLatestRoom(part, isEntity)
 	if not part or not part:IsDescendantOf(workspace) then return false end
+	
+	if isEntity and LocalPlayer and LocalPlayer.Character then
+		local hrp = LocalPlayer.Character.PrimaryPart or LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if hrp and (part.Position - hrp.Position).Magnitude <= 200 then
+			return true
+		end
+	end
+
 	local currentRooms = workspace:FindFirstChild("CurrentRooms")
 	if not currentRooms then return true end
 	if part:IsDescendantOf(currentRooms) then
@@ -905,7 +913,8 @@ end
 local function ApplyESP(part, color, name, showText)
 	if not part or not part:IsA("BasePart") or ActiveESP[part] then return end
 	showText = showText == nil and true or showText
-	local initialVisible = not ESPOptimized or (isPartInLatestRoom(part) and isOnScreen(part))
+	local isMonster = table.find(trackedMonsters, part) ~= nil or table.find(trackedFigure, part) ~= nil
+	local initialVisible = not ESPOptimized or (isPartInLatestRoom(part, isMonster) and isOnScreen(part))
 	local hl = GetPooledHighlight()
 	hl.FillColor, hl.OutlineColor = color, color
 	hl.FillTransparency, hl.OutlineTransparency = 0.5, 0
@@ -926,7 +935,8 @@ local function updateESPVisibility()
 		if part and part.Parent and part:IsDescendantOf(workspace) then
 			local visible = true
 			if ESPOptimized then
-				visible = isPartInLatestRoom(part) and isOnScreen(part)
+				local isMonster = table.find(trackedMonsters, part) ~= nil or table.find(trackedFigure, part) ~= nil
+				visible = isPartInLatestRoom(part, isMonster) and isOnScreen(part)
 			end
 			if data.Highlight then data.Highlight.Enabled = visible end
 			if data.Billboard then data.Billboard.Enabled = visible end
@@ -1289,13 +1299,22 @@ local function updateESP()
 		end
 		if ESPMonsters then
 			pruneTracked(trackedMonsters)
-			for _, child in ipairs(workspace:GetChildren()) do
+			local function processMonsterModel(child)
 				if child:IsA("Model") and Entities[child.Name] then
 					local part = child.PrimaryPart or child:FindFirstChild("HumanoidRootPart") or child:FindFirstChild("Hitbox") or child:FindFirstChildWhichIsA("BasePart")
 					if part and part:IsA("BasePart") and not ActiveESP[part] then
 						ApplyESP(part, Color3.fromRGB(255, 0, 0), (Entities[child.Name].Alias or child.Name):lower())
 						table.insert(trackedMonsters, part)
 					end
+				end
+			end
+
+			for _, child in ipairs(workspace:GetChildren()) do
+				processMonsterModel(child)
+			end
+			if currentRooms then
+				for _, desc in ipairs(currentRooms:GetDescendants()) do
+					processMonsterModel(desc)
 				end
 			end
 		end
@@ -1703,11 +1722,9 @@ AlertsSection:Toggle({Name="monster notification", Default=false, Callback=funct
 		end
 		local cr = workspace:FindFirstChild("CurrentRooms")
 		if cr then
-			for _, room in ipairs(cr:GetChildren()) do
-				for _, child in ipairs(room:GetChildren()) do
-					if child:IsA("Model") and Entities[child.Name] then
-						handleEntitySpawn(child)
-					end
+			for _, desc in ipairs(cr:GetDescendants()) do
+				if desc:IsA("Model") and Entities[desc.Name] then
+					handleEntitySpawn(desc)
 				end
 			end
 		end
@@ -1840,11 +1857,9 @@ EspSection:Toggle({Name="monsters", Default=false, Callback=function(v)
 		end
 		local cr = workspace:FindFirstChild("CurrentRooms")
 		if cr then
-			for _, room in ipairs(cr:GetChildren()) do
-				for _, child in ipairs(room:GetChildren()) do
-					if child:IsA("Model") and Entities[child.Name] then
-						handleEntitySpawn(child)
-					end
+			for _, desc in ipairs(cr:GetDescendants()) do
+				if desc:IsA("Model") and Entities[desc.Name] then
+					handleEntitySpawn(desc)
 				end
 			end
 		end
