@@ -80,6 +80,7 @@ local ForgetMeNotConnection = nil
 local ForgetMeNotRunning = false
 local ForgetMeNotProcessing = {}
 local ForgetMeNotNotified = {}
+local NoiseConnection = nil
 local LatestRoom = ReplicatedStorage:WaitForChild("GameData", 5) and ReplicatedStorage.GameData:WaitForChild("LatestRoom", 5) or {Value = 0}
 
 local camera = Workspace.CurrentCamera
@@ -138,6 +139,22 @@ pcall(function()
 		originalGetMoveVector = require(LocalPlayer.PlayerScripts.PlayerModule):GetControls().GetMoveVector
 	end
 end)
+
+-- Helper to handle Noise TV Position Teleport
+local function checkBypassNoiseTvStand(targetTvStand)
+	if not targetTvStand:IsA("Model") then return end
+	if targetTvStand.Name ~= "TV_Stand" then return end
+
+	local tvStandCurrentCFrame = targetTvStand:GetPivot()
+
+	if tvStandCurrentCFrame.Position.Y > -119 then
+		targetTvStand:PivotTo(CFrame.new(
+			tvStandCurrentCFrame.Position.X,
+			-120,
+			tvStandCurrentCFrame.Position.Z
+		))
+	end
+end
 
 -- New Bypass Logic Handlers
 Toggles.BypassAlma:OnChanged(function(Value)
@@ -201,39 +218,18 @@ Toggles.BypassDrones:OnChanged(function(Value)
 end)
 
 Toggles.BypassNoise:OnChanged(function(value)
-	for i = #Connections, 1, -1 do
-		local existingConnection = Connections[i]
-		if existingConnection and existingConnection.Disconnect then
-			existingConnection:Disconnect()
-		end
-		table.remove(Connections, i)
+	if NoiseConnection then
+		NoiseConnection:Disconnect()
+		NoiseConnection = nil
 	end
-
 	if not value then return end
-
-	local function checkBypassNoiseTvStand(targetTvStand)
-		if not targetTvStand:IsA("Model") then return end
-		if targetTvStand.Name ~= "TV_Stand" then return end
-
-		local tvStandCurrentCFrame = targetTvStand:GetPivot()
-
-		if tvStandCurrentCFrame.Position.Y > -119 then
-			targetTvStand:PivotTo(CFrame.new(
-				tvStandCurrentCFrame.Position.X,
-				-120,
-				tvStandCurrentCFrame.Position.Z
-			))
-		end
-	end
 
 	local bypassNoiseMiscFolder = workspace:FindFirstChild("Misc")
 	if not bypassNoiseMiscFolder then return end
 
-	local bypassNoiseMiscChildAddedConnection = bypassNoiseMiscFolder.ChildAdded:Connect(function(bypassNoiseNewChild)
+	NoiseConnection = bypassNoiseMiscFolder.ChildAdded:Connect(function(bypassNoiseNewChild)
 		checkBypassNoiseTvStand(bypassNoiseNewChild)
 	end)
-
-	Connections[#Connections + 1] = bypassNoiseMiscChildAddedConnection
 
 	for _, bypassNoiseMiscChild in ipairs(bypassNoiseMiscFolder:GetChildren()) do
 		checkBypassNoiseTvStand(bypassNoiseMiscChild)
@@ -900,9 +896,9 @@ local function findBooks(currentRooms)
 		for _, child in ipairs(room100:GetChildren()) do
 			local base = child:FindFirstChild("Base")
 			if base and base:IsA("BasePart") and not isPartInSkippedRoom(base) and not ActiveESP[base] then
-				ApplyESP(base, Color3.fromRGB(255,255,0), "fuse", true)
-				table.insert(trackedBooks, base)
-			end
+								ApplyESP(base, Color3.fromRGB(255,255,0), "fuse", true)
+								table.insert(trackedBooks, base)
+							end
 		end
 	end
 end
