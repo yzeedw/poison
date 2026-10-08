@@ -236,6 +236,25 @@ local ForgetMeNotProcessing = {}
 local ForgetMeNotNotified = {}
 local LatestRoom = ReplicatedStorage:WaitForChild("GameData", 5) and ReplicatedStorage.GameData:WaitForChild("LatestRoom", 5) or {Value = 0}
 
+local function getLatestRoom(currentRooms)
+	currentRooms = currentRooms or Workspace:FindFirstChild("CurrentRooms")
+	if not currentRooms then return nil end
+	local roomNum = LatestRoom and LatestRoom.Value
+	if roomNum then
+		local room = currentRooms:FindFirstChild(tostring(roomNum))
+		if room then return room end
+	end
+	local highest, highestRoom = -1, nil
+	for _, room in ipairs(currentRooms:GetChildren()) do
+		local num = tonumber(room.Name)
+		if num and num > highest then
+			highest = num
+			highestRoom = room
+		end
+	end
+	return highestRoom
+end
+
 local camera = Workspace.CurrentCamera
 local v23, v15 = false, nil
 
@@ -995,7 +1014,7 @@ task.spawn(function()
 	if not cr then return end
 	cr.ChildAdded:Connect(function(room)
 		task.wait(0.3)
-		if ESPItems then setupRoomItemESP(room) end
+		if ESPItems and room == getLatestRoom(cr) then setupRoomItemESP(room) end
 	end)
 	cr.ChildRemoved:Connect(function(room)
 		teardownRoomItemESP(room)
@@ -1013,7 +1032,8 @@ local function findItems(currentRooms)
 			teardownRoomItemESP(room)
 		end
 	end
-	for _, room in ipairs(currentRooms:GetChildren()) do
+	local room = getLatestRoom(currentRooms)
+	if room then
 		setupRoomItemESP(room)
 	end
 end
@@ -1174,7 +1194,8 @@ end
 local function findWardrobes(currentRooms)
 	if not ESPWardrobes then if #trackedWardrobes > 0 then clearTrackedGroup(trackedWardrobes) end return end
 	pruneTracked(trackedWardrobes)
-	for _, room in ipairs(currentRooms:GetChildren()) do
+	local room = getLatestRoom(currentRooms)
+	if room then
 		local assets = room:FindFirstChild("Assets")
 		if assets then
 			for _, w in ipairs(assets:GetChildren()) do
@@ -1193,7 +1214,8 @@ end
 local function findKeys(currentRooms)
 	if not ESPKeys then if #trackedKeys > 0 then clearTrackedGroup(trackedKeys) end return end
 	pruneTracked(trackedKeys)
-	for _, room in ipairs(currentRooms:GetChildren()) do
+	local room = getLatestRoom(currentRooms)
+	if room then
 		local assets = room:FindFirstChild("Assets")
 		if assets then
 			for _, child in ipairs(assets:GetChildren()) do
@@ -1212,7 +1234,8 @@ end
 local function findLevers(currentRooms)
 	if not ESPLevers then if #trackedLevers > 0 then clearTrackedGroup(trackedLevers) end return end
 	pruneTracked(trackedLevers)
-	for _, room in ipairs(currentRooms:GetChildren()) do
+	local room = getLatestRoom(currentRooms)
+	if room then
 		local assets = room:FindFirstChild("Assets")
 		if assets then
 			local lfg = assets:FindFirstChild("LeverForGate")
@@ -1233,7 +1256,8 @@ local function updateESP()
 		if currentRooms then
 			if ESPDoors then
 				pruneTracked(trackedDoors)
-				for _, room in ipairs(currentRooms:GetChildren()) do
+				local room = getLatestRoom(currentRooms)
+				if room then
 					local door = room:FindFirstChild("Door")
 					if door and door.PrimaryPart and not ActiveESP[door.PrimaryPart] then
 						ApplyESP(door.PrimaryPart, Color3.fromRGB(100,255,100), "door " .. ((tonumber(room.Name) or 0) + 1))
@@ -1776,7 +1800,8 @@ EspSection:Toggle({Name="items", Default=false, Callback=function(v)
 	else
 		local cr = workspace:FindFirstChild("CurrentRooms")
 		if cr then
-			for _, room in ipairs(cr:GetChildren()) do
+			local room = getLatestRoom(cr)
+			if room then
 				setupRoomItemESP(room)
 			end
 		end
