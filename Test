@@ -357,6 +357,8 @@ Toggles.BypassDrones:OnChanged(function(Value)
 	end
 end)
 
+-- [FIX] Bypass Noise: no longer early-returns when Misc is missing.
+-- Now watches workspace.ChildAdded for Misc folder AND checks workspace directly.
 Toggles.BypassNoise:OnChanged(function(value)
 	for i = #Connections, 1, -1 do
 		local existingConnection = Connections[i]
@@ -369,32 +371,48 @@ Toggles.BypassNoise:OnChanged(function(value)
 	if not value then return end
 
 	local function checkBypassNoiseTvStand(targetTvStand)
-		if not targetTvStand:IsA("Model") then return end
+		if not targetTvStand or not targetTvStand:IsA("Model") then return end
 		if targetTvStand.Name ~= "TV_Stand" then return end
-
-		local tvStandCurrentCFrame = targetTvStand:GetPivot()
-
+		local ok, tvStandCurrentCFrame = pcall(function() return targetTvStand:GetPivot() end)
+		if not ok then return end
 		if tvStandCurrentCFrame.Position.Y > -119 then
-			targetTvStand:PivotTo(CFrame.new(
-				tvStandCurrentCFrame.Position.X,
-				-120,
-				tvStandCurrentCFrame.Position.Z
-			))
+			pcall(function()
+				targetTvStand:PivotTo(CFrame.new(
+					tvStandCurrentCFrame.Position.X,
+					-120,
+					tvStandCurrentCFrame.Position.Z
+				))
+			end)
 		end
 	end
 
-	local bypassNoiseMiscFolder = workspace:FindFirstChild("Misc")
-	if not bypassNoiseMiscFolder then return end
-
-	local bypassNoiseMiscChildAddedConnection = bypassNoiseMiscFolder.ChildAdded:Connect(function(bypassNoiseNewChild)
-		checkBypassNoiseTvStand(bypassNoiseNewChild)
-	end)
-
-	Connections[#Connections + 1] = bypassNoiseMiscChildAddedConnection
-
-	for _, bypassNoiseMiscChild in ipairs(bypassNoiseMiscFolder:GetChildren()) do
-		checkBypassNoiseTvStand(bypassNoiseMiscChild)
+	local function watchMiscFolder(folder)
+		Connections[#Connections + 1] = folder.ChildAdded:Connect(function(child)
+			task.defer(checkBypassNoiseTvStand, child)
+		end)
+		for _, child in ipairs(folder:GetChildren()) do
+			pcall(checkBypassNoiseTvStand, child)
+		end
 	end
+
+	-- Check Misc folder if it exists already
+	local miscFolder = workspace:FindFirstChild("Misc")
+	if miscFolder then
+		watchMiscFolder(miscFolder)
+	end
+
+	-- Also scan workspace directly (TV_Stand can appear outside Misc)
+	for _, child in ipairs(workspace:GetChildren()) do
+		pcall(checkBypassNoiseTvStand, child)
+	end
+
+	-- Watch for Misc folder to appear + direct workspace TV_Stand additions
+	Connections[#Connections + 1] = workspace.ChildAdded:Connect(function(child)
+		pcall(checkBypassNoiseTvStand, child)
+		if child.Name == "Misc" then
+			watchMiscFolder(child)
+		end
+	end)
 end)
 
 Toggles.ForgetMeNotSolver:OnChanged(function(Value)
@@ -438,7 +456,6 @@ Toggles.ForgetMeNotSolver:OnChanged(function(Value)
 	local function VoidCharacter()
 		local Character = GetCharacter()
 		if not Character then return end
-
 		local voidCF = CFrame.new(0, -120, 0)
 		local start = tick()
 		while ForgetMeNotRunning and tick() - start < 2 do
@@ -450,24 +467,13 @@ Toggles.ForgetMeNotSolver:OnChanged(function(Value)
 	local function Run(Room)
 		local RoomNumber = tonumber(Room.Name)
 		if not RoomNumber or not ForgetMeNotRunning or ForgetMeNotProcessing[RoomNumber] then return end
-
-		if not Room:FindFirstChild("ForgetMeNotVineDoors", true) then
-			return
-		end
-
+		if not Room:FindFirstChild("ForgetMeNotVineDoors", true) then return end
 		ForgetMeNotProcessing[RoomNumber] = true
-
 		while ForgetMeNotRunning and Room.Parent do
 			FireLookAts(Room)
-
 			local NextRoom = GetNextRoom(RoomNumber)
-			if not NextRoom then
-				task.wait(0.4)
-				continue
-			end
-
+			if not NextRoom then task.wait(0.4); continue end
 			local Door = NextRoom:FindFirstChild("Door")
-
 			if not Door then
 				local Character = GetCharacter()
 				if Character then
@@ -482,18 +488,9 @@ Toggles.ForgetMeNotSolver:OnChanged(function(Value)
 				end
 				break
 			end
-
-			if Door:GetAttribute("Opened") == true then
-				VoidCharacter()
-				break
-			end
-
+			if Door:GetAttribute("Opened") == true then VoidCharacter(); break end
 			local Hidden = Door:FindFirstChild("Hidden") or Door:WaitForChild("Hidden", 2)
-			if not Hidden then
-				task.wait(0.3)
-				continue
-			end
-
+			if not Hidden then task.wait(0.3); continue end
 			while ForgetMeNotRunning and Room.Parent and NextRoom.Parent and Door.Parent and Door:GetAttribute("Opened") ~= true do
 				local Character = GetCharacter()
 				if Character then
@@ -507,14 +504,11 @@ Toggles.ForgetMeNotSolver:OnChanged(function(Value)
 				pcall(function() Door.ClientOpen:FireServer() end)
 				task.wait()
 			end
-
 			if ForgetMeNotRunning and Door.Parent and Door:GetAttribute("Opened") == true then
 				VoidCharacter()
 			end
-
 			break
 		end
-
 		ForgetMeNotProcessing[RoomNumber] = nil
 	end
 
@@ -534,19 +528,13 @@ Toggles.ForgetMeNotSolver:OnChanged(function(Value)
 		if not tonumber(Room.Name) then return end
 		task.spawn(function()
 			task.wait(1)
-			if ForgetMeNotRunning and Room.Parent then
-				task.spawn(Run, Room)
-			end
+			if ForgetMeNotRunning and Room.Parent then task.spawn(Run, Room) end
 		end)
 	end)
 
 	task.spawn(function()
-		while ForgetMeNotRunning do
-			CheckRooms()
-			task.wait(1)
-		end
+		while ForgetMeNotRunning do CheckRooms(); task.wait(1) end
 	end)
-
 	CheckRooms()
 end)
 
@@ -652,20 +640,16 @@ end
 local function HandleInfPrompt(prompt)
 	local character = LocalPlayer.Character
 	if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-
 	local lockpick = character:FindFirstChild("Lockpick") or character:FindFirstChild("SkeletonKey")
 		or character:FindFirstChild("Shears") or character:FindFirstChild("Multitool")
 	local toolName = lockpick and lockpick.Name
-
 	if lockpick and InfiniteItemsSelected then
 		local keyMap = {Lockpick="lockpick",SkeletonKey="skeleton key",Shears="shears",Multitool="multitool"}
 		local selectedKey = keyMap[lockpick.Name]
 		if selectedKey and not InfiniteItemsSelected[selectedKey] then return end
 	end
-
 	local parentPart = prompt.Parent and (prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart"))
 	local dist = parentPart and Distance(parentPart.Position) or 999
-
 	if lockpick and dist <= prompt.MaxActivationDistance + 5 then
 		if prompt:GetAttribute("InfItems") and prompt:GetAttribute("Tool") ~= toolName then RestorePrompt(prompt) end
 		if prompt:GetAttribute("InfItems") then
@@ -673,35 +657,29 @@ local function HandleInfPrompt(prompt)
 			if tick() - (infTime or 0) > 8 or dist > prompt.MaxActivationDistance + 7 then RestorePrompt(prompt) end
 			return
 		end
-
 		prompt.Enabled = false
 		prompt:SetAttribute("InfItems", true)
 		prompt:SetAttribute("Tool", toolName)
 		prompt:SetAttribute("InfTime", tick())
 		prompt.ClickablePrompt = false
-
 		local infPrompt = prompt:Clone()
 		infPrompt.Name, infPrompt.MaxActivationDistance = "InfPrompt", prompt.MaxActivationDistance
 		infPrompt.Parent, infPrompt.Enabled, infPrompt.ClickablePrompt = prompt.Parent, true, true
-
 		local connect2, connect3, cleanupFn
 		cleanupFn = function()
 			if connect2 then connect2:Disconnect() end
 			if connect3 then connect3:Disconnect() end
 			RestorePrompt(prompt)
 		end
-
 		connect3 = infPrompt.PromptButtonHoldEnded:Connect(function()
 			task.delay(0.15, function()
 				if infPrompt and infPrompt.Parent then cleanupFn() end
 			end)
 		end)
-
 		connect2 = infPrompt.Triggered:Connect(function()
 			if connect3 then connect3:Disconnect() end
 			if connect2 then connect2:Disconnect() end
 			if infPrompt and infPrompt.Parent then infPrompt:Destroy() end
-
 			if character:FindFirstChild(toolName) then
 				task.spawn(function()
 					local startTick = tick()
@@ -721,7 +699,6 @@ local function HandleInfPrompt(prompt)
 						end
 						isFinished = droppedTool or not character:FindFirstChild(toolName) or (tick() - startTick > 2.5)
 					until isFinished
-
 					local fireFunc = fireproximityprompt
 					if toolName == "Shears" then
 						if fireFunc then fireFunc(prompt) end
@@ -744,7 +721,6 @@ local function HandleInfPrompt(prompt)
 		end)
 		return
 	end
-
 	if prompt:GetAttribute("InfItems") then RestorePrompt(prompt) end
 end
 
@@ -821,10 +797,13 @@ local Floor = ReplicatedStorage:FindFirstChild("GameData") and ReplicatedStorage
 local ESPDoors, ESPKeys, ESPItems, ESPLevers = false, false, false, false
 local ESPMonsters, ESPPlayers, ESPBooks, ESPWardrobes = false, false, false, false
 local ESPOptimized, ESPOptimizationMethod, ThirdPersonEnabled = false, "default", false
-local monsterNotifyConn, ShowTimerConnection = nil, nil
+local monsterNotifyConn, monsterNotifyDescConn, ShowTimerConnection = nil, nil, nil
 
 local trackedBooks, trackedWardrobes, trackedKeys, trackedLevers = {}, {}, {}, {}
 local trackedFigure, trackedItems, trackedDoors, trackedMonsters, trackedPlayers = {}, {}, {}, {}, {}
+
+-- [FIX] Event-driven item ESP: per-room connections instead of GetDescendants polling
+local itemESPRoomConns = {}
 
 local function getLatestRoomNumber()
 	local gd = ReplicatedStorage:FindFirstChild("GameData")
@@ -1007,25 +986,80 @@ local function CodeAll(v)
 	end
 end
 
+-- [FIX] Event-driven item ESP helpers
+local function tryApplyItemESP(desc)
+	if not ESPItems or not desc or not desc.Parent then return end
+	local itemName = ItemNames[desc.Name]
+	if not itemName then return end
+	local hasPrompt = desc:FindFirstChildWhichIsA("ProximityPrompt", true) ~= nil
+		or (desc.Parent and desc.Parent:FindFirstChildWhichIsA("ProximityPrompt"))
+		or desc:IsA("Tool")
+	if not hasPrompt then return end
+	local part = (desc:IsA("BasePart") and desc)
+		or (desc:IsA("Model") and (desc.PrimaryPart or desc:FindFirstChild("Handle") or desc:FindFirstChildWhichIsA("BasePart")))
+	if part and part:IsA("BasePart") and not isPartInSkippedRoom(part) and not ActiveESP[part] then
+		ApplyESP(part, Color3.fromRGB(255, 0, 255), itemName:lower())
+		table.insert(trackedItems, part)
+	end
+end
+
+local function setupRoomItemESP(room)
+	if not room or itemESPRoomConns[room] then return end
+	for _, desc in ipairs(room:GetDescendants()) do
+		pcall(tryApplyItemESP, desc)
+	end
+	itemESPRoomConns[room] = room.DescendantAdded:Connect(function(desc)
+		if ESPItems then task.defer(tryApplyItemESP, desc) end
+	end)
+end
+
+local function teardownRoomItemESP(room)
+	if itemESPRoomConns[room] then
+		itemESPRoomConns[room]:Disconnect()
+		itemESPRoomConns[room] = nil
+	end
+end
+
+local function teardownAllItemESP()
+	for room, conn in pairs(itemESPRoomConns) do
+		conn:Disconnect()
+	end
+	table.clear(itemESPRoomConns)
+	clearTrackedGroup(trackedItems)
+end
+
+-- Watch for new/removed rooms to update item ESP
+task.spawn(function()
+	local cr = workspace:FindFirstChild("CurrentRooms")
+	if not cr then
+		cr = workspace:WaitForChild("CurrentRooms", 30)
+	end
+	if not cr then return end
+	cr.ChildAdded:Connect(function(room)
+		task.wait(0.3) -- let room populate first
+		if ESPItems then setupRoomItemESP(room) end
+	end)
+	cr.ChildRemoved:Connect(function(room)
+		teardownRoomItemESP(room)
+	end)
+end)
+
+-- [FIX] Rewritten findItems: event-driven, no more GetDescendants polling
 local function findItems(currentRooms)
-	if not ESPItems then if #trackedItems > 0 then clearTrackedGroup(trackedItems) end return end
+	if not ESPItems then
+		teardownAllItemESP()
+		return
+	end
 	pruneTracked(trackedItems)
-	for _, room in ipairs(getRoomsToScan(currentRooms)) do
-		for _, desc in ipairs(room:GetDescendants()) do
-			local itemName = ItemNames[desc.Name]
-			if itemName then
-				local obtainable = desc:FindFirstChildWhichIsA("ProximityPrompt", true) ~= nil
-					or (desc.Parent and desc.Parent:FindFirstChildWhichIsA("ProximityPrompt"))
-					or desc:IsA("Tool")
-				if obtainable then
-					local part = desc:IsA("BasePart") and desc or desc.PrimaryPart or desc:FindFirstChild("Handle") or desc:FindFirstChildWhichIsA("BasePart")
-					if part and part:IsA("BasePart") and not isPartInSkippedRoom(part) and not ActiveESP[part] then
-						ApplyESP(part, Color3.fromRGB(255,0,255), itemName:lower())
-						table.insert(trackedItems, part)
-					end
-				end
-			end
+	-- Clean up dead room connections
+	for room, _ in pairs(itemESPRoomConns) do
+		if not room or not room.Parent then
+			teardownRoomItemESP(room)
 		end
+	end
+	-- Ensure all current scan-eligible rooms have connections
+	for _, room in ipairs(getRoomsToScan(currentRooms)) do
+		setupRoomItemESP(room)
 	end
 end
 
@@ -1078,26 +1112,114 @@ local function getEntityDisplayName(rawName)
 	return nil
 end
 
+-- [FIX] Unified entity handler: handles both monster ESP and notifications,
+-- triggered from ChildAdded AND DescendantAdded (catches Figure, nested entities, etc.)
+local lastPortraitNotify = 0
+local notifiedEntities = setmetatable({}, {__mode = "k"})
+
+local function handleEntitySpawn(entity)
+	if not entity or not entity:IsA("Model") then return end
+	if entity:GetAttribute("CelestialEntityHandled") then return end
+	local entityData = Entities[entity.Name]
+	if not entityData then return end
+	entity:SetAttribute("CelestialEntityHandled", true)
+
+	-- Wait briefly for the model to fully replicate
+	task.wait(0.1)
+	if not entity.Parent then return end
+
+	-- Figure: shrink root so it doesn't block camera
+	if entity.Name == "FigureRig" or entity.Name == "FigureRagdoll" then
+		pcall(function()
+			local root = entity:FindFirstChild("Root")
+			if root then root.Size = Vector3.new(0.001, 0.001, 0.001) end
+		end)
+	end
+
+	-- Monster Notification
+	if _G.NotifyEntity and not notifiedEntities[entity] then
+		local canNotify = true
+		if entityData.Alias == "Portrait" then
+			if tick() - lastPortraitNotify < 10 then
+				canNotify = false
+			else
+				lastPortraitNotify = tick()
+			end
+		end
+		if canNotify then
+			notifiedEntities[entity] = true
+			entity:SetAttribute("AlreadyNotified", true)
+			if entityData.NotifyMessage then
+				playAlertSound()
+				Library:Notification({
+					Text = entityData.NotifyMessage.Title:lower() .. " - " .. entityData.NotifyMessage.Body:lower(),
+					Duration = 6
+				})
+			elseif entityData.Alias then
+				playAlertSound()
+				Library:Notification({Text = "alert: " .. entityData.Alias:lower() .. " spawned!", Duration = 5})
+			end
+		end
+	end
+
+	-- Monster ESP
+	if ESPMonsters then
+		local part = entity.PrimaryPart
+			or entity:FindFirstChild("HumanoidRootPart")
+			or entity:FindFirstChild("Hitbox")
+			or entity:FindFirstChildWhichIsA("BasePart")
+		if part and part:IsA("BasePart") and not isPartInSkippedRoom(part) and not ActiveESP[part] then
+			ApplyESP(part, Color3.fromRGB(255, 0, 0), entityData.Alias:lower())
+			table.insert(trackedMonsters, part)
+		end
+	end
+end
+
+-- [FIX] Real-time entity detection via ChildAdded + DescendantAdded
+-- ChildAdded catches most rushers; DescendantAdded catches Figure (nested in CurrentRooms)
+workspace.ChildAdded:Connect(function(child)
+	if child:IsA("Model") then
+		task.spawn(handleEntitySpawn, child)
+	end
+end)
+
+workspace.DescendantAdded:Connect(function(desc)
+	if desc:IsA("Model") and Entities[desc.Name] then
+		task.spawn(handleEntitySpawn, desc)
+	end
+end)
+
 local function findFigure(currentRooms)
 	if not ESPMonsters then if #trackedFigure > 0 then clearTrackedGroup(trackedFigure) end return end
 	pruneTracked(trackedFigure)
+
+	local function applyFigureESP(fr)
+		if not fr then return end
+		pcall(function()
+			local root = fr:FindFirstChild("Root")
+			if root then root.Size = Vector3.new(0.001, 0.001, 0.001) end
+		end)
+		local hb = fr:FindFirstChild("Hitbox") or fr.PrimaryPart or fr:FindFirstChild("HumanoidRootPart")
+		if hb and hb:IsA("BasePart") and not isPartInSkippedRoom(hb) and not ActiveESP[hb] then
+			ApplyESP(hb, Color3.fromRGB(255,0,0), "figure")
+			table.insert(trackedFigure, hb)
+		end
+	end
+
+	-- [FIX] Also check workspace directly in case Figure spawned there
+	for _, child in ipairs(workspace:GetChildren()) do
+		if child.Name == "FigureRig" or child.Name == "FigureRagdoll" then
+			applyFigureESP(child)
+		end
+	end
+
 	for _, rn in ipairs({"50","100"}) do
 		local room = currentRooms:FindFirstChild(rn)
 		if room then
 			local fs = room:FindFirstChild("FigureSetup")
 			if fs then
 				local fr = fs:FindFirstChild("FigureRig") or fs:FindFirstChild("FigureRagdoll")
-				if fr then
-					pcall(function()
-						local root = fr:FindFirstChild("Root")
-						if root then root.Size = Vector3.new(0.001, 0.001, 0.001) end
-					end)
-					local hb = fr:FindFirstChild("Hitbox") or fr.PrimaryPart or fr:FindFirstChild("HumanoidRootPart")
-					if hb and hb:IsA("BasePart") and not isPartInSkippedRoom(hb) and not ActiveESP[hb] then
-						ApplyESP(hb, Color3.fromRGB(255,0,0), getEntityDisplayName("FigureRig"):lower() or "figure")
-						table.insert(trackedFigure, hb)
-					end
-				end
+				applyFigureESP(fr)
 			end
 		end
 	end
@@ -1180,26 +1302,10 @@ local function updateESP()
 			pcall(findKeys, currentRooms)
 			pcall(findLevers, currentRooms)
 		end
+		-- [FIX] Monster polling kept as cleanup/fallback only;
+		-- primary detection now comes from handleEntitySpawn (ChildAdded + DescendantAdded above)
 		if ESPMonsters then
 			pruneTracked(trackedMonsters)
-			for _, monster in ipairs(Workspace:GetChildren()) do
-				if monster:IsA("Model") then
-					local mn = getEntityDisplayName(monster.Name)
-					if mn then
-						if monster.Name == "FigureRig" or monster.Name == "FigureRagdoll" then
-							pcall(function()
-								local root = monster:FindFirstChild("Root")
-								if root then root.Size = Vector3.new(0.001, 0.001, 0.001) end
-							end)
-						end
-						local part = monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChild("Hitbox") or monster:FindFirstChildWhichIsA("BasePart")
-						if part and not isPartInSkippedRoom(part) and not ActiveESP[part] then
-							ApplyESP(part, Color3.fromRGB(255,0,0), mn:lower())
-							table.insert(trackedMonsters, part)
-						end
-					end
-				end
-			end
 		end
 		if ESPPlayers then
 			pruneTracked(trackedPlayers)
@@ -1559,11 +1665,11 @@ ExploitsSection:Toggle({Name="no a-90 damage", Default=false, Callback=function(
 ExploitsSection:Toggle({Name="no screech damage", Default=false, Callback=function(v) _G.NoScreechDamage = v end})
 ExploitsSection:Toggle({Name="no halt damage", Default=false, Callback=function(v) _G.NoHaltDamage = v end})
 
--- New Bypass Entities UI Section
+-- Bypass Entities UI Section
 Tog(ArchivesSection, "bypass alma", Toggles.BypassAlma, "Destroys Alma on spawn")
 Tog(ArchivesSection, "anti scribbles", Toggles.AntiScribbles, "Bypasses Scribbles exploit warnings")
 Tog(ArchivesSection, "bypass drones", Toggles.BypassDrones, "Safe drone collision bypass")
-Tog(ArchivesSection, "bypass noise", Toggles.BypassNoise, "Teleports Noise TV stand out of bound")
+Tog(ArchivesSection, "bypass noise", Toggles.BypassNoise, "Teleports Noise TV stand out of bounds")
 Tog(ArchivesSection, "forget-me-not solver", Toggles.ForgetMeNotSolver, "Automatically solves Forget-Me-Not room puzzles")
 
 -- Infinite Items UI Section
@@ -1592,58 +1698,32 @@ AutomationSection:Dropdown({Name="breaker mode", Options={"instant","legit"}, De
 Tog(MinesSection, "auto minecart", Toggles.AutoMinecart)
 Tog(MinesSection, "auto anchor solver", Toggles.AutoAnchorSolver)
 
--- Monster Notification & Alert Listener Logic with Abysall Duplicate Check Logic
-local lastPortraitNotify = 0
-local notifiedEntities = setmetatable({}, {__mode = "k"})
-
+-- [FIX] Monster Notification: now uses handleEntitySpawn (via _G.NotifyEntity flag).
+-- Also scans EXISTING workspace children + descendants when toggled on,
+-- so entities already in-game when you enable the toggle still notify.
 AlertsSection:Toggle({Name="monster notification", Default=false, Callback=function(v)
+	-- Disconnect old dedicated connections (no longer needed; handleEntitySpawn handles this)
+	if monsterNotifyConn then monsterNotifyConn:Disconnect(); monsterNotifyConn = nil end
+	if monsterNotifyDescConn then monsterNotifyDescConn:Disconnect(); monsterNotifyDescConn = nil end
+
+	_G.NotifyEntity = v
+
 	if v then
-		monsterNotifyConn = Workspace.ChildAdded:Connect(function(child)
-			task.wait(0.1)
-			local rawName = child.Name
-			local entityData = Entities[rawName]
-
-			-- Fuzzy search if exact match doesn't pull
-			if not entityData then
-				local lowerRaw = string.lower(tostring(rawName))
-				for key, data in pairs(Entities) do
-					if string.find(lowerRaw, string.lower(key), 1, true) then
-						entityData = data
-						break
-					end
-				end
+		-- Scan all currently-loaded entities in workspace (direct children)
+		for _, child in ipairs(workspace:GetChildren()) do
+			if child:IsA("Model") and Entities[child.Name] then
+				task.spawn(handleEntitySpawn, child)
 			end
-
-			if entityData then
-				-- Exact same duplication avoidance like Abysall
-				if child:GetAttribute("AlreadyNotified") or notifiedEntities[child] then
-					return
-				end
-				
-				if entityData.Alias == "Portrait" then
-					if tick() - lastPortraitNotify < 10 then
-						return
-					end
-					lastPortraitNotify = tick()
-				end
-
-				child:SetAttribute("AlreadyNotified", true)
-				notifiedEntities[child] = true
-				
-				if entityData.NotifyMessage then
-					playAlertSound()
-					Library:Notification({
-						Text = entityData.NotifyMessage.Title:lower() .. " - " .. entityData.NotifyMessage.Body:lower(),
-						Duration = 6
-					})
-				elseif entityData.Alias then
-					playAlertSound()
-					Library:Notification({Text = "alert: " .. entityData.Alias:lower() .. " spawned!", Duration = 5})
+		end
+		-- Scan descendants (catches Figure inside CurrentRooms, etc.)
+		task.spawn(function()
+			for _, desc in ipairs(workspace:GetDescendants()) do
+				if desc:IsA("Model") and Entities[desc.Name] then
+					handleEntitySpawn(desc)
+					task.wait() -- yield to avoid hitching on large scans
 				end
 			end
 		end)
-	else
-		if monsterNotifyConn then monsterNotifyConn:Disconnect(); monsterNotifyConn = nil end
 	end
 end})
 
@@ -1744,10 +1824,46 @@ EspSection:Toggle({Name="optimize esp", Default=false, Callback=function(v) ESPO
 EspSection:Dropdown({Name="optimization method", Options={"default","onscreen"}, Default="default", Callback=function(v) ESPOptimizationMethod = v end})
 EspSection:Toggle({Name="doors", Default=false, Callback=function(v) ESPDoors = v; if not v then clearTrackedGroup(trackedDoors) end end})
 EspSection:Toggle({Name="keys", Default=false, Callback=function(v) ESPKeys = v; if not v then clearTrackedGroup(trackedKeys) end end})
-EspSection:Toggle({Name="items", Default=false, Callback=function(v) ESPItems = v; if not v then clearTrackedGroup(trackedItems) end end})
+
+-- [FIX] Items toggle: immediately scans all current rooms on enable
+EspSection:Toggle({Name="items", Default=false, Callback=function(v)
+	ESPItems = v
+	if not v then
+		teardownAllItemESP()
+	else
+		local cr = workspace:FindFirstChild("CurrentRooms")
+		if cr then
+			for _, room in ipairs(cr:GetChildren()) do
+				setupRoomItemESP(room)
+			end
+		end
+	end
+end})
+
 EspSection:Toggle({Name="books/fuses", Default=false, Callback=function(v) ESPBooks = v; if not v then clearTrackedGroup(trackedBooks) end end})
 EspSection:Toggle({Name="levers", Default=false, Callback=function(v) ESPLevers = v; if not v then clearTrackedGroup(trackedLevers) end end})
-EspSection:Toggle({Name="monsters", Default=false, Callback=function(v) ESPMonsters = v; if not v then clearTrackedGroup(trackedMonsters); clearTrackedGroup(trackedFigure) end end})
+EspSection:Toggle({Name="monsters", Default=false, Callback=function(v)
+	ESPMonsters = v
+	if not v then
+		clearTrackedGroup(trackedMonsters)
+		clearTrackedGroup(trackedFigure)
+	else
+		-- [FIX] Scan existing entities on enable so already-spawned monsters get ESP
+		for _, child in ipairs(workspace:GetChildren()) do
+			if child:IsA("Model") and Entities[child.Name] then
+				task.spawn(handleEntitySpawn, child)
+			end
+		end
+		task.spawn(function()
+			for _, desc in ipairs(workspace:GetDescendants()) do
+				if desc:IsA("Model") and Entities[desc.Name] then
+					handleEntitySpawn(desc)
+					task.wait()
+				end
+			end
+		end)
+	end
+end})
 EspSection:Toggle({Name="closets", Default=false, Callback=function(v) ESPWardrobes = v; if not v then clearTrackedGroup(trackedWardrobes) end end})
 EspSection:Toggle({Name="players", Default=false, Callback=function(v) ESPPlayers = v; if not v then clearTrackedGroup(trackedPlayers) end end})
 EspSection:Toggle({Name="seek path", Default=false, Callback=function(v)
