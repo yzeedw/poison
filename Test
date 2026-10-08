@@ -37,7 +37,8 @@ _G.EntityTable = {
 		Glitch={"glitch","glitch detected!"},Halt={"halt","follow the movement prompts!"},
 		Shade={"halt","follow the movement prompts!"},Haste={"haste","hurry up!"},
 		Hide={"hide","get out of the closet!"},Honcho={"honcho","beware of honcho!"},
-		Jack={"jack","closet jump scare!"},Louie={"louie","louie is nearby!"},Noise={"noise","be quiet!"},NoiseModel={"noise","don't let it touch you."},
+		Jack={"jack","closet jump scare!"},Louie={"louie","louie is nearby!"},
+		Noise={"noise","be quiet!"},NoiseModel={"noise","don't let it touch you."},
 		TV_Stand={"noise tv","don't get near it."},Portrait={"portrait","watch the painting!"},
 		QueenGrumble={"queen grumble","queen grumble spawned!"},QueenGrumbleRig={"queen grumble","queen grumble spawned!"},
 		Scribbles={"scribbles","watch out for scribbles!"},Stem={"stem","keep away from stem!"},StemsEntity={"balls","balls."},
@@ -80,7 +81,6 @@ local ForgetMeNotConnection = nil
 local ForgetMeNotRunning = false
 local ForgetMeNotProcessing = {}
 local ForgetMeNotNotified = {}
-local NoiseConnection = nil
 local LatestRoom = ReplicatedStorage:WaitForChild("GameData", 5) and ReplicatedStorage.GameData:WaitForChild("LatestRoom", 5) or {Value = 0}
 
 local camera = Workspace.CurrentCamera
@@ -139,22 +139,6 @@ pcall(function()
 		originalGetMoveVector = require(LocalPlayer.PlayerScripts.PlayerModule):GetControls().GetMoveVector
 	end
 end)
-
--- Helper to handle Noise TV Position Teleport
-local function checkBypassNoiseTvStand(targetTvStand)
-	if not targetTvStand:IsA("Model") then return end
-	if targetTvStand.Name ~= "TV_Stand" then return end
-
-	local tvStandCurrentCFrame = targetTvStand:GetPivot()
-
-	if tvStandCurrentCFrame.Position.Y > -119 then
-		targetTvStand:PivotTo(CFrame.new(
-			tvStandCurrentCFrame.Position.X,
-			-120,
-			tvStandCurrentCFrame.Position.Z
-		))
-	end
-end
 
 -- New Bypass Logic Handlers
 Toggles.BypassAlma:OnChanged(function(Value)
@@ -218,21 +202,38 @@ Toggles.BypassDrones:OnChanged(function(Value)
 end)
 
 Toggles.BypassNoise:OnChanged(function(value)
-	if NoiseConnection then
-		NoiseConnection:Disconnect()
-		NoiseConnection = nil
+	for i = #Connections, 1, -1 do
+		local existingConnection = Connections[i]
+		if existingConnection and existingConnection.Disconnect then
+			existingConnection:Disconnect()
+		end
+		table.remove(Connections, i)
 	end
+
 	if not value then return end
 
-	local bypassNoiseMiscFolder = workspace:FindFirstChild("Misc")
-	if not bypassNoiseMiscFolder then return end
+	local function checkBypassNoise(target)
+		if not target or not target:IsA("Model") then return end
+		local name = target.Name
+		if name == "TV_Stand" or name == "NoiseModel" or name == "Noise" then
+			local tvStandCurrentCFrame = target:GetPivot()
+			if tvStandCurrentCFrame.Position.Y > -119 then
+				target:PivotTo(CFrame.new(
+					tvStandCurrentCFrame.Position.X,
+					-120,
+					tvStandCurrentCFrame.Position.Z
+				))
+			end
+		end
+	end
 
-	NoiseConnection = bypassNoiseMiscFolder.ChildAdded:Connect(function(bypassNoiseNewChild)
-		checkBypassNoiseTvStand(bypassNoiseNewChild)
+	local noiseConn = workspace.DescendantAdded:Connect(function(child)
+		checkBypassNoise(child)
 	end)
+	Connections[#Connections + 1] = noiseConn
 
-	for _, bypassNoiseMiscChild in ipairs(bypassNoiseMiscFolder:GetChildren()) do
-		checkBypassNoiseTvStand(bypassNoiseMiscChild)
+	for _, desc in ipairs(workspace:GetDescendants()) do
+		checkBypassNoise(desc)
 	end
 end)
 
@@ -662,7 +663,81 @@ local ESPMonsters, ESPPlayers, ESPBooks, ESPWardrobes = false, false, false, fal
 local ESPOptimized, ESPOptimizationMethod, ThirdPersonEnabled = false, "default", false
 local monsterNotifyConn, ShowTimerConnection = nil, nil
 
-local itemNames = {"Crucifix","Flashlight","Lighter","Lockpick","SkeletonKey","Battery","Vitamins","Smoothie","Candle","Bandage","Shakelight","Straplight"}
+-- Complete Item Mapping from Abyssal
+local ItemNames = {
+	["AbrahamHat"]        = "Hat",
+	["LargeScrew"]        = "Screw",
+	["DinkyLamp"]         = "Lamp",
+	["BottleCrate"]       = "18+ Bottles",
+	["GweenSodaPack"]     = "Gween Soda Pack",
+	["BrokenMonitor"]     = "Broken Monitor",
+	["JerryCan"]          = "Jerry Can",
+	["SallyToyObtain"]    = "Sally Toy",
+	["Leftovers"]         = "Lunch Box",
+	["HoneyPot"]          = "Honey Pot",
+	["FihFlakes"]         = "Fih Food",
+	["SecretCD"]          = "CD Disc",
+	["Pizza"]             = "Pizza",
+	["PaperPlanePickup"]  = "Paper Plane",
+	["Lighter"]           = "Lighter",
+	["Flashlight"]        = "Flashlight",
+	["Lockpick"]          = "Lockpicks",
+	["Vitamins"]          = "Vitamins",
+	["Bandage"]           = "Bandage",
+	["StarVial"]          = "Starlight Vial",
+	["StarBottle"]        = "Starlight Bottle",
+	["StarJug"]           = "Starlight Barrel",
+	["Shakelight"]        = "Gummy Flashlight",
+	["Straplight"]        = "Straplight",
+	["Bulklight"]         = "Spotlight",
+	["Battery"]           = "Battery",
+	["Candle"]            = "Candle",
+	["Crucifix"]          = "Crucifix",
+	["CrucifixWall"]      = "Crucifix",
+	["Glowsticks"]        = "Glowstick",
+	["SkeletonKey"]       = "Skeleton Key",
+	["Candy"]             = "Candy",
+	["ShieldMini"]        = "Mini Shield Potion",
+	["ShieldBig"]         = "Big Shield Potion",
+	["BandagePack"]       = "Bandage Pack",
+	["BatteryPack"]       = "Battery Pack",
+	["RiftCandle"]        = "Moonlight Candle",
+	["LaserPointer"]      = "Laser Pointer",
+	["HolyGrenade"]       = "Holy Hand Grenade",
+	["Shears"]            = "Shears",
+	["Smoothie"]          = "Smoothie",
+	["Cheese"]            = "Cheese",
+	["Bread"]             = "Bread",
+	["AlarmClock"]        = "Alarm Clock",
+	["RiftSmoothie"]      = "Moonlight Smoothie",
+	["GweenSoda"]         = "Gween Soda",
+	["GlitchCube"]        = "Glitch Fragment",
+	["Scanner"]           = "Tablet",
+	["Bomb"]              = "Bomb",
+	["Knockbomb"]         = "Knockbomb",
+	["Nanner"]            = "Nanner",
+	["BigBomb"]           = "Big Bomb",
+	["SnakeBox"]          = "Hiding Box",
+	["GoldGun"]           = "Golden Gun",
+	["StopSign"]          = "Stop Sign",
+	["TipJar"]            = "Tip Jar",
+	["Lantern"]           = "Lantern",
+	["IronKey"]           = "Iron Key",
+	["LotusPetal"]        = "Lotus Petal",
+	["Compass"]           = "Compass",
+	["LotusPetalPickup"]  = "Lotus Petal",
+	["LanternLitItem"]    = "Lantern",
+	["KeyIron"]           = "Iron Key",
+	["IronKeyForCrypt"]   = "Iron Key",
+	["LotusHolder"]       = "Lotus Petal",
+	["Multitool"]         = "Multitool",
+	["RiftJar"]           = "Rift Jar",
+	["AloeVera"]          = "Aloe Vera",
+	["Donut"]             = "Donut",
+	["Lotus"]             = "Lotus",
+	["BoxingGloves"]      = "Boxing Gloves"
+}
+
 local trackedBooks, trackedWardrobes, trackedKeys, trackedLevers = {}, {}, {}, {}
 local trackedFigure, trackedItems, trackedDoors, trackedMonsters, trackedPlayers = {}, {}, {}, {}, {}
 
@@ -692,7 +767,7 @@ local function isPartInSkippedRoom(part)
 end
 
 local function getRoomsToScan(currentRooms)
-	if not ESPOptimized then return currentRooms:GetChildren() end
+	if not ESPOptimized or not currentRooms then return currentRooms and currentRooms:GetChildren() or {} end
 	local latestRoom = getLatestRoomNumber()
 	local validRooms = {}
 	for _, room in ipairs(currentRooms:GetChildren()) do
@@ -847,19 +922,32 @@ local function CodeAll(v)
 	end
 end
 
+-- Abyssal Item ESP Logic Implementation
 local function findItems(currentRooms)
 	if not ESPItems then if #trackedItems > 0 then clearTrackedGroup(trackedItems) end return end
 	pruneTracked(trackedItems)
-	for _, room in ipairs(getRoomsToScan(currentRooms)) do
-		for _, desc in ipairs(room:GetDescendants()) do
-			if table.find(itemNames, desc.Name) then
+
+	local containers = {}
+	if currentRooms then
+		for _, room in ipairs(getRoomsToScan(currentRooms)) do
+			table.insert(containers, room)
+		end
+	end
+	local drops = Workspace:FindFirstChild("Drops")
+	if drops then table.insert(containers, drops) end
+
+	for _, container in ipairs(containers) do
+		for _, desc in ipairs(container:GetDescendants()) do
+			local mappedName = ItemNames[desc.Name]
+			if mappedName then
 				local obtainable = desc:FindFirstChildWhichIsA("ProximityPrompt", true) ~= nil
 					or (desc.Parent and desc.Parent:FindFirstChildWhichIsA("ProximityPrompt"))
 					or desc:IsA("Tool")
+					or desc.Parent == drops
 				if obtainable then
 					local part = desc:IsA("BasePart") and desc or desc.PrimaryPart or desc:FindFirstChild("Handle") or desc:FindFirstChildWhichIsA("BasePart")
 					if part and part:IsA("BasePart") and not isPartInSkippedRoom(part) and not ActiveESP[part] then
-						ApplyESP(part, Color3.fromRGB(255,0,255), desc.Name:lower())
+						ApplyESP(part, Color3.fromRGB(255,0,255), mappedName:lower())
 						table.insert(trackedItems, part)
 					end
 				end
@@ -871,6 +959,7 @@ end
 local function findBooks(currentRooms)
 	if not ESPBooks then if #trackedBooks > 0 then clearTrackedGroup(trackedBooks) end return end
 	pruneTracked(trackedBooks)
+	if not currentRooms then return end
 	local room50 = currentRooms:FindFirstChild("50")
 	if room50 then
 		local assets = room50:FindFirstChild("Assets")
@@ -896,9 +985,9 @@ local function findBooks(currentRooms)
 		for _, child in ipairs(room100:GetChildren()) do
 			local base = child:FindFirstChild("Base")
 			if base and base:IsA("BasePart") and not isPartInSkippedRoom(base) and not ActiveESP[base] then
-								ApplyESP(base, Color3.fromRGB(255,255,0), "fuse", true)
-								table.insert(trackedBooks, base)
-							end
+				ApplyESP(base, Color3.fromRGB(255,255,0), "fuse", true)
+				table.insert(trackedBooks, base)
+			end
 		end
 	end
 end
@@ -906,6 +995,9 @@ end
 local function getEntityDisplayName(rawName)
 	if _G.EntityTable.Entity[rawName] then
 		return _G.EntityTable.Entity[rawName]
+	end
+	if string.find(rawName, "MirrorRig_Portrait_") or string.find(rawName, "Portrait") then
+		return "portrait"
 	end
 	local lowerRaw = string.lower(tostring(rawName))
 	for key, dispName in pairs(_G.EntityTable.Entity) do
@@ -920,6 +1012,7 @@ end
 local function findFigure(currentRooms)
 	if not ESPMonsters then if #trackedFigure > 0 then clearTrackedGroup(trackedFigure) end return end
 	pruneTracked(trackedFigure)
+	if not currentRooms then return end
 	for _, rn in ipairs({"50","100"}) do
 		local room = currentRooms:FindFirstChild(rn)
 		if room then
@@ -945,6 +1038,7 @@ end
 local function findWardrobes(currentRooms)
 	if not ESPWardrobes then if #trackedWardrobes > 0 then clearTrackedGroup(trackedWardrobes) end return end
 	pruneTracked(trackedWardrobes)
+	if not currentRooms then return end
 	for _, room in ipairs(getRoomsToScan(currentRooms)) do
 		local assets = room:FindFirstChild("Assets")
 		if assets then
@@ -964,6 +1058,7 @@ end
 local function findKeys(currentRooms)
 	if not ESPKeys then if #trackedKeys > 0 then clearTrackedGroup(trackedKeys) end return end
 	pruneTracked(trackedKeys)
+	if not currentRooms then return end
 	for _, room in ipairs(getRoomsToScan(currentRooms)) do
 		local assets = room:FindFirstChild("Assets")
 		if assets then
@@ -983,6 +1078,7 @@ end
 local function findLevers(currentRooms)
 	if not ESPLevers then if #trackedLevers > 0 then clearTrackedGroup(trackedLevers) end return end
 	pruneTracked(trackedLevers)
+	if not currentRooms then return end
 	for _, room in ipairs(getRoomsToScan(currentRooms)) do
 		local assets = room:FindFirstChild("Assets")
 		if assets then
@@ -1021,21 +1117,37 @@ local function updateESP()
 		end
 		if ESPMonsters then
 			pruneTracked(trackedMonsters)
-			for _, monster in ipairs(Workspace:GetChildren()) do
-				if monster:IsA("Model") then
-					local mn = getEntityDisplayName(monster.Name)
-					if mn then
-						if monster.Name == "FigureRig" or monster.Name == "FigureRagdoll" then
-							pcall(function()
-								local root = monster:FindFirstChild("Root")
-								if root then root.Size = Vector3.new(0.001, 0.001, 0.001) end
-							end)
-						end
-						local part = monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChild("Hitbox") or monster:FindFirstChildWhichIsA("BasePart")
-						if part and not isPartInSkippedRoom(part) and not ActiveESP[part] then
-							ApplyESP(part, Color3.fromRGB(255,0,0), mn:lower())
-							table.insert(trackedMonsters, part)
-						end
+			local potentialMonsters = {}
+			for _, child in ipairs(Workspace:GetChildren()) do
+				if child:IsA("Model") then table.insert(potentialMonsters, child) end
+			end
+			local misc = Workspace:FindFirstChild("Misc")
+			if misc then
+				for _, child in ipairs(misc:GetChildren()) do
+					if child:IsA("Model") then table.insert(potentialMonsters, child) end
+				end
+			end
+			if currentRooms then
+				for _, room in ipairs(getRoomsToScan(currentRooms)) do
+					for _, desc in ipairs(room:GetChildren()) do
+						if desc:IsA("Model") then table.insert(potentialMonsters, desc) end
+					end
+				end
+			end
+
+			for _, monster in ipairs(potentialMonsters) do
+				local mn = getEntityDisplayName(monster.Name)
+				if mn then
+					if monster.Name == "FigureRig" or monster.Name == "FigureRagdoll" then
+						pcall(function()
+							local root = monster:FindFirstChild("Root")
+							if root then root.Size = Vector3.new(0.001, 0.001, 0.001) end
+						end)
+					end
+					local part = monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChild("Hitbox") or monster:FindFirstChildWhichIsA("BasePart")
+					if part and not isPartInSkippedRoom(part) and not ActiveESP[part] then
+						ApplyESP(part, Color3.fromRGB(255,0,0), mn:lower())
+						table.insert(trackedMonsters, part)
 					end
 				end
 			end
@@ -1431,30 +1543,34 @@ AutomationSection:Dropdown({Name="breaker mode", Options={"instant","legit"}, De
 Tog(MinesSection, "auto minecart", Toggles.AutoMinecart)
 Tog(MinesSection, "auto anchor solver", Toggles.AutoAnchorSolver)
 
--- Monster Notification & Alert Listener Logic
-local notifiedDrones = setmetatable({}, {__mode = "k"})
+-- Monster Notification Listener Logic Fixed for Stairwell and Subfolders
+local notifiedEntities = setmetatable({}, {__mode = "k"})
 local lastDroneSpawnTime = 0
 local lastPortraitNotify = 0
 
 AlertsSection:Toggle({Name="monster notification", Default=false, Callback=function(v)
 	if v then
-		monsterNotifyConn = Workspace.ChildAdded:Connect(function(child)
+		local function checkAndNotify(child)
+			if not child or not child:IsA("Model") then return end
+			if notifiedEntities[child] then return end
+
 			local rawName = child.Name
+			if string.find(rawName, "MirrorRig_Portrait_") then rawName = "Portrait" end
+
 			local nd = _G.EntityTable.EntityNotify[rawName]
 			local dispName = getEntityDisplayName(rawName)
 
+			if not nd and not dispName then return end
+
 			if rawName == "Drone" or rawName == "DronesStampede" or (dispName and dispName:lower():find("drone")) then
-				if notifiedDrones[child] or (tick() - lastDroneSpawnTime < 3) then
-					return
-				end
-				notifiedDrones[child] = true
+				if tick() - lastDroneSpawnTime < 3 then return end
 				lastDroneSpawnTime = tick()
 			elseif rawName == "Portrait" or (dispName and dispName:lower() == "portrait") then
-				if tick() - lastPortraitNotify < 10 then
-					return
-				end
+				if tick() - lastPortraitNotify < 10 then return end
 				lastPortraitNotify = tick()
 			end
+
+			notifiedEntities[child] = true
 
 			if nd then
 				playAlertSound()
@@ -1463,6 +1579,20 @@ AlertsSection:Toggle({Name="monster notification", Default=false, Callback=funct
 				playAlertSound()
 				Library:Notification({Text = "alert: " .. dispName:lower() .. " spawned!", Duration = 5})
 			end
+		end
+
+		for _, desc in ipairs(workspace:GetDescendants()) do
+			if desc:IsA("Model") then
+				checkAndNotify(desc)
+			end
+		end
+
+		monsterNotifyConn = workspace.DescendantAdded:Connect(function(child)
+			task.delay(0.05, function()
+				if child and child.Parent then
+					checkAndNotify(child)
+				end
+			end)
 		end)
 	else
 		if monsterNotifyConn then monsterNotifyConn:Disconnect(); monsterNotifyConn = nil end
