@@ -3,7 +3,6 @@ local Window = Library:Window("celestial")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Abysall Entity Table Integration
 local Entities = {
 	["TV_Stand"] = {
 		Alias = "Noise_TV",
@@ -133,7 +132,6 @@ local Entities = {
 	["FigureRagdoll"] = { Alias = "Figure" }
 }
 
--- Abysall Item Table Integration
 local ItemNames = {
 	["AbrahamHat"]        = "Hat",
 	["LargeScrew"]        = "Screw",
@@ -228,7 +226,6 @@ local TextChatService = game:GetService("TextChatService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local PathfindingService = game:GetService("PathfindingService")
 
--- Bypass Global State Variables & Connections
 local AlmaConnection = nil
 local AntiScribbles_Connection = nil
 local DroneConnection = nil
@@ -262,7 +259,6 @@ Globals.SeekPathFolder.Name = "SeekPath"
 
 local Connections = {}
 
--- Toggle Object Helper to support both .Value and :OnChanged
 local function CreateToggleObject()
 	local obj = {Value = false, Listeners = {}}
 	function obj:OnChanged(func)
@@ -296,7 +292,6 @@ pcall(function()
 	end
 end)
 
--- New Bypass Logic Handlers
 Toggles.BypassAlma:OnChanged(function(Value)
 	if AlmaConnection then
 		AlmaConnection:Disconnect()
@@ -556,8 +551,12 @@ local function FixBridge(bridgeModel)
 	end
 end
 
-local function showNotification(text)
-	Library:Notification({Text = text:lower(), Duration = 3})
+local function UpdateBeamVisibility(BeamTable, Visible)
+	local Vis = Visible and 0 or 1
+	local Seq = NumberSequence.new({NumberSequenceKeypoint.new(0,Vis), NumberSequenceKeypoint.new(1,Vis)})
+	for _, Beam in ipairs(BeamTable) do
+		if Beam and Beam.Parent then Beam.Transparency = Seq end
+	end
 end
 
 local RemotesFolder = ReplicatedStorage:FindFirstChild("RemotesFolder") or ReplicatedStorage
@@ -583,12 +582,6 @@ RunService.Heartbeat:Connect(function()
 		if LocalPlayer.Character and not LocalPlayer.Character:GetAttribute("Hiding") then
 			if motorReplication then motorReplication:FireServer(-650) end
 		end
-	end
-end)
-
-RunService.RenderStepped:Connect(function()
-	if toggles.NoCamShake.Value and v15 then
-		pcall(function() v15.csgo = CFrame.new(0,0,0) end)
 	end
 end)
 
@@ -783,47 +776,18 @@ local Floor = ReplicatedStorage:FindFirstChild("GameData") and ReplicatedStorage
 
 local ESPDoors, ESPKeys, ESPItems, ESPLevers = false, false, false, false
 local ESPMonsters, ESPPlayers, ESPBooks, ESPWardrobes = false, false, false, false
-local ESPOptimized, ESPOptimizationMethod, ThirdPersonEnabled = false, "default", false
-local ShowTimerConnection = nil
+local ESPOptimized, ThirdPersonEnabled = false, false
+local monsterNotifyConn, monsterNotifyDescConn, ShowTimerConnection = nil, nil, nil
 
 local trackedBooks, trackedWardrobes, trackedKeys, trackedLevers = {}, {}, {}, {}
 local trackedFigure, trackedItems, trackedDoors, trackedMonsters, trackedPlayers = {}, {}, {}, {}, {}
 
-local function getLatestRoomNumber()
-	local gd = ReplicatedStorage:FindFirstChild("GameData")
-	return gd and gd:FindFirstChild("LatestRoom") and gd.LatestRoom.Value or 0
-end
+local itemESPRoomConns = {}
 
 local function isOnScreen(part)
 	if not part or not part:IsA("BasePart") then return false end
 	local _, visible = camera:WorldToViewportPoint(part.Position)
 	return visible
-end
-
-local function isPartInSkippedRoom(part)
-	if not ESPOptimized or not part or not part.Parent then return false end
-	local latestRoom = getLatestRoomNumber()
-	local currentRooms = Workspace:FindFirstChild("CurrentRooms")
-	if currentRooms then
-		for _, room in ipairs(currentRooms:GetChildren()) do
-			local rn = tonumber(room.Name)
-			if rn and rn < (latestRoom - 1) and part:IsDescendantOf(room) then return true end
-		end
-	end
-	if (ESPOptimizationMethod == "onscreen" or ESPOptimizationMethod == "onScreen") and not isOnScreen(part) then return true end
-	return false
-end
-
-local function getRoomsToScan(currentRooms)
-	if not currentRooms then return {} end
-	if not ESPOptimized then return currentRooms:GetChildren() end
-	local latestRoom = getLatestRoomNumber()
-	local validRooms = {}
-	for _, room in ipairs(currentRooms:GetChildren()) do
-		local rn = tonumber(room.Name)
-		if not rn or rn >= (latestRoom - 1) then table.insert(validRooms, room) end
-	end
-	return validRooms
 end
 
 if hookmetamethod and newcclosure then
@@ -915,14 +879,15 @@ end
 local function ApplyESP(part, color, name, showText)
 	if not part or not part:IsA("BasePart") or ActiveESP[part] then return end
 	showText = showText == nil and true or showText
+	local initialVisible = not ESPOptimized or isOnScreen(part)
 	local hl = GetPooledHighlight()
 	hl.FillColor, hl.OutlineColor = color, color
 	hl.FillTransparency, hl.OutlineTransparency = 0.5, 0
-	hl.Adornee, hl.Enabled, hl.Parent = part, true, part
+	hl.Adornee, hl.Enabled, hl.Parent = part, initialVisible, part
 	local bb = nil
 	if showText and name and name ~= "" then
 		bb = GetPooledBillboard()
-		bb.Adornee, bb.Enabled = part, true
+		bb.Adornee, bb.Enabled = part, initialVisible
 		local tl = bb:FindFirstChild("ESPText")
 		if tl then tl.Text, tl.TextColor3 = name:lower(), color end
 		bb.Parent = part
@@ -930,19 +895,56 @@ local function ApplyESP(part, color, name, showText)
 	ActiveESP[part] = {Highlight=hl, Billboard=bb}
 end
 
-local function clearTrackedGroup(t)
-	for i = #t, 1, -1 do
-		local part = t[i]
-		if part then ReleaseESP(part) end
+local function updateESPVisibility()
+	for part, data in pairs(ActiveESP) do
+		if part and part.Parent and part:IsDescendantOf(workspace) then
+			local visible = not ESPOptimized or isOnScreen(part)
+			if data.Highlight then data.Highlight.Enabled = visible end
+			if data.Billboard then data.Billboard.Enabled = visible end
+		else
+			ReleaseESP(part)
+		end
 	end
+end
+
+local function clearTrackedGroup(t)
+	for _, part in ipairs(t) do if part then ReleaseESP(part) end end
 	table.clear(t)
 end
 
 local function pruneTracked(t)
 	for i = #t, 1, -1 do
 		local part = t[i]
-		if not part or not part.Parent or not part:IsDescendantOf(workspace) or isPartInSkippedRoom(part) then
-			ReleaseESP(part); table.remove(t, i)
+		if not part or not part.Parent or not part:IsDescendantOf(workspace) then
+			ReleaseESP(part)
+			table.remove(t, i)
+		end
+	end
+end
+
+local function Deciphercode(v)
+	local Hints = LocalPlayer.PlayerGui:WaitForChild("PermUI"):WaitForChild("Hints")
+	local code = {[1]="_",[2]="_",[3]="_",[4]="_",[5]="_"}
+	for _, ui in pairs(v:WaitForChild("UI"):GetChildren()) do
+		if ui:IsA("ImageLabel") and ui.Name ~= "Image" then
+			for _, hint in pairs(Hints:GetChildren()) do
+				if hint:IsA("ImageLabel") and hint.Visible and ui.ImageRectOffset == hint.ImageRectOffset then
+					code[tonumber(ui.Name)] = hint:FindFirstChild("TextLabel").Text
+				end
+			end
+		end
+	end
+	return code
+end
+
+local function CodeAll(v)
+	if v:IsA("Tool") and v.Name == "LibraryHintPaper" then
+		local code = table.concat(Deciphercode(v))
+		if code then
+			Library:Notification({Text = "library code: " .. code, Duration = 15})
+			if _G.NotifyEntityChat then
+				pcall(function() TextChatService.TextChannels.RBXGeneral:SendAsync((_G.ChatNotify or "") .. code) end)
+			end
 		end
 	end
 end
@@ -957,30 +959,68 @@ local function tryApplyItemESP(desc)
 	if not hasPrompt then return end
 	local part = (desc:IsA("BasePart") and desc)
 		or (desc:IsA("Model") and (desc.PrimaryPart or desc:FindFirstChild("Handle") or desc:FindFirstChildWhichIsA("BasePart")))
-	if part and part:IsA("BasePart") and not isPartInSkippedRoom(part) and not ActiveESP[part] then
+	if part and part:IsA("BasePart") and not ActiveESP[part] then
 		ApplyESP(part, Color3.fromRGB(255, 0, 255), itemName:lower())
 		table.insert(trackedItems, part)
 	end
 end
 
+local function setupRoomItemESP(room)
+	if not room or itemESPRoomConns[room] then return end
+	for _, desc in ipairs(room:GetDescendants()) do
+		pcall(tryApplyItemESP, desc)
+	end
+	itemESPRoomConns[room] = room.DescendantAdded:Connect(function(desc)
+		if ESPItems then task.defer(tryApplyItemESP, desc) end
+	end)
+end
+
+local function teardownRoomItemESP(room)
+	if itemESPRoomConns[room] then
+		itemESPRoomConns[room]:Disconnect()
+		itemESPRoomConns[room] = nil
+	end
+end
+
+local function teardownAllItemESP()
+	for room, conn in pairs(itemESPRoomConns) do
+		conn:Disconnect()
+	end
+	table.clear(itemESPRoomConns)
+	clearTrackedGroup(trackedItems)
+end
+
+task.spawn(function()
+	local cr = workspace:FindFirstChild("CurrentRooms") or workspace:WaitForChild("CurrentRooms", 30)
+	if not cr then return end
+	cr.ChildAdded:Connect(function(room)
+		task.wait(0.3)
+		if ESPItems then setupRoomItemESP(room) end
+	end)
+	cr.ChildRemoved:Connect(function(room)
+		teardownRoomItemESP(room)
+	end)
+end)
+
 local function findItems(currentRooms)
 	if not ESPItems then
-		if #trackedItems > 0 then clearTrackedGroup(trackedItems) end
+		teardownAllItemESP()
 		return
 	end
 	pruneTracked(trackedItems)
-	if not currentRooms then return end
-	for _, room in ipairs(getRoomsToScan(currentRooms)) do
-		for _, desc in ipairs(room:GetDescendants()) do
-			tryApplyItemESP(desc)
+	for room, _ in pairs(itemESPRoomConns) do
+		if not room or not room.Parent then
+			teardownRoomItemESP(room)
 		end
+	end
+	for _, room in ipairs(currentRooms:GetChildren()) do
+		setupRoomItemESP(room)
 	end
 end
 
 local function findBooks(currentRooms)
 	if not ESPBooks then if #trackedBooks > 0 then clearTrackedGroup(trackedBooks) end return end
 	pruneTracked(trackedBooks)
-	if not currentRooms then return end
 	local room50 = currentRooms:FindFirstChild("50")
 	if room50 then
 		local assets = room50:FindFirstChild("Assets")
@@ -991,7 +1031,7 @@ local function findBooks(currentRooms)
 						local lhb = item:FindFirstChild("LiveHintBook")
 						if lhb then
 							local base = lhb:FindFirstChild("Base")
-							if base and base:IsA("BasePart") and not isPartInSkippedRoom(base) and not ActiveESP[base] then
+							if base and base:IsA("BasePart") and not ActiveESP[base] then
 								ApplyESP(base, Color3.fromRGB(255,255,0), "book", true)
 								table.insert(trackedBooks, base)
 							end
@@ -1005,7 +1045,7 @@ local function findBooks(currentRooms)
 	if room100 then
 		for _, child in ipairs(room100:GetChildren()) do
 			local base = child:FindFirstChild("Base")
-			if base and base:IsA("BasePart") and not isPartInSkippedRoom(base) and not ActiveESP[base] then
+			if base and base:IsA("BasePart") and not ActiveESP[base] then
 				ApplyESP(base, Color3.fromRGB(255,255,0), "fuse", true)
 				table.insert(trackedBooks, base)
 			end
@@ -1013,13 +1053,32 @@ local function findBooks(currentRooms)
 	end
 end
 
+local function getEntityDisplayName(rawName)
+	if Entities[rawName] then
+		return Entities[rawName].Alias
+	end
+	local lowerRaw = string.lower(tostring(rawName))
+	for key, data in pairs(Entities) do
+		local lowerKey = string.lower(key)
+		if string.find(lowerRaw, lowerKey, 1, true) or string.find(lowerKey, lowerRaw, 1, true) then
+			return data.Alias
+		end
+	end
+	return nil
+end
+
 local lastPortraitNotify = 0
 local notifiedEntities = setmetatable({}, {__mode = "k"})
 
 local function handleEntitySpawn(entity)
 	if not entity or not entity:IsA("Model") then return end
+	if entity:GetAttribute("CelestialEntityHandled") then return end
 	local entityData = Entities[entity.Name]
 	if not entityData then return end
+	entity:SetAttribute("CelestialEntityHandled", true)
+
+	task.wait(0.1)
+	if not entity.Parent then return end
 
 	if entity.Name == "FigureRig" or entity.Name == "FigureRagdoll" then
 		pcall(function()
@@ -1039,6 +1098,7 @@ local function handleEntitySpawn(entity)
 		end
 		if canNotify then
 			notifiedEntities[entity] = true
+			entity:SetAttribute("AlreadyNotified", true)
 			if entityData.NotifyMessage then
 				playAlertSound()
 				Library:Notification({
@@ -1051,42 +1111,15 @@ local function handleEntitySpawn(entity)
 			end
 		end
 	end
-end
 
-local function findMonsters(currentRooms)
-	if not ESPMonsters then
-		if #trackedMonsters > 0 then clearTrackedGroup(trackedMonsters) end
-		return
-	end
-	pruneTracked(trackedMonsters)
-
-	local function checkAndApplyMonster(entity)
-		if not entity or not entity:IsA("Model") then return end
-		local entityData = Entities[entity.Name]
-		if not entityData then return end
+	if ESPMonsters then
 		local part = entity.PrimaryPart
 			or entity:FindFirstChild("HumanoidRootPart")
 			or entity:FindFirstChild("Hitbox")
 			or entity:FindFirstChildWhichIsA("BasePart")
-		if part and part:IsA("BasePart") and not isPartInSkippedRoom(part) and not ActiveESP[part] then
+		if part and part:IsA("BasePart") and not ActiveESP[part] then
 			ApplyESP(part, Color3.fromRGB(255, 0, 0), entityData.Alias:lower())
 			table.insert(trackedMonsters, part)
-		end
-	end
-
-	for _, child in ipairs(workspace:GetChildren()) do
-		if child:IsA("Model") and Entities[child.Name] then
-			checkAndApplyMonster(child)
-		end
-	end
-
-	if currentRooms then
-		for _, room in ipairs(getRoomsToScan(currentRooms)) do
-			for _, desc in ipairs(room:GetChildren()) do
-				if desc:IsA("Model") and Entities[desc.Name] then
-					checkAndApplyMonster(desc)
-				end
-			end
 		end
 	end
 end
@@ -1114,7 +1147,7 @@ local function findFigure(currentRooms)
 			if root then root.Size = Vector3.new(0.001, 0.001, 0.001) end
 		end)
 		local hb = fr:FindFirstChild("Hitbox") or fr.PrimaryPart or fr:FindFirstChild("HumanoidRootPart")
-		if hb and hb:IsA("BasePart") and not isPartInSkippedRoom(hb) and not ActiveESP[hb] then
+		if hb and hb:IsA("BasePart") and not ActiveESP[hb] then
 			ApplyESP(hb, Color3.fromRGB(255,0,0), "figure")
 			table.insert(trackedFigure, hb)
 		end
@@ -1126,15 +1159,13 @@ local function findFigure(currentRooms)
 		end
 	end
 
-	if currentRooms then
-		for _, rn in ipairs({"50","100"}) do
-			local room = currentRooms:FindFirstChild(rn)
-			if room then
-				local fs = room:FindFirstChild("FigureSetup")
-				if fs then
-					local fr = fs:FindFirstChild("FigureRig") or fs:FindFirstChild("FigureRagdoll")
-					applyFigureESP(fr)
-				end
+	for _, rn in ipairs({"50","100"}) do
+		local room = currentRooms:FindFirstChild(rn)
+		if room then
+			local fs = room:FindFirstChild("FigureSetup")
+			if fs then
+				local fr = fs:FindFirstChild("FigureRig") or fs:FindFirstChild("FigureRagdoll")
+				applyFigureESP(fr)
 			end
 		end
 	end
@@ -1143,14 +1174,13 @@ end
 local function findWardrobes(currentRooms)
 	if not ESPWardrobes then if #trackedWardrobes > 0 then clearTrackedGroup(trackedWardrobes) end return end
 	pruneTracked(trackedWardrobes)
-	if not currentRooms then return end
-	for _, room in ipairs(getRoomsToScan(currentRooms)) do
+	for _, room in ipairs(currentRooms:GetChildren()) do
 		local assets = room:FindFirstChild("Assets")
 		if assets then
 			for _, w in ipairs(assets:GetChildren()) do
 				if w.Name == "Wardrobe" then
 					local main = w:FindFirstChild("Main")
-					if main and main:IsA("BasePart") and not isPartInSkippedRoom(main) and not ActiveESP[main] then
+					if main and main:IsA("BasePart") and not ActiveESP[main] then
 						ApplyESP(main, Color3.fromRGB(224,145,76), "closet")
 						table.insert(trackedWardrobes, main)
 					end
@@ -1163,14 +1193,13 @@ end
 local function findKeys(currentRooms)
 	if not ESPKeys then if #trackedKeys > 0 then clearTrackedGroup(trackedKeys) end return end
 	pruneTracked(trackedKeys)
-	if not currentRooms then return end
-	for _, room in ipairs(getRoomsToScan(currentRooms)) do
+	for _, room in ipairs(currentRooms:GetChildren()) do
 		local assets = room:FindFirstChild("Assets")
 		if assets then
 			for _, child in ipairs(assets:GetChildren()) do
 				if child.Name == "KeyObtain" then
 					local hb = child:FindFirstChild("Hitbox")
-					if hb and hb:IsA("BasePart") and not isPartInSkippedRoom(hb) and not ActiveESP[hb] then
+					if hb and hb:IsA("BasePart") and not ActiveESP[hb] then
 						ApplyESP(hb, Color3.fromRGB(255,255,0), "key")
 						table.insert(trackedKeys, hb)
 					end
@@ -1183,14 +1212,13 @@ end
 local function findLevers(currentRooms)
 	if not ESPLevers then if #trackedLevers > 0 then clearTrackedGroup(trackedLevers) end return end
 	pruneTracked(trackedLevers)
-	if not currentRooms then return end
-	for _, room in ipairs(getRoomsToScan(currentRooms)) do
+	for _, room in ipairs(currentRooms:GetChildren()) do
 		local assets = room:FindFirstChild("Assets")
 		if assets then
 			local lfg = assets:FindFirstChild("LeverForGate")
 			if lfg then
 				local main = lfg:FindFirstChild("Main")
-				if main and main:IsA("BasePart") and not isPartInSkippedRoom(main) and not ActiveESP[main] then
+				if main and main:IsA("BasePart") and not ActiveESP[main] then
 					ApplyESP(main, Color3.fromRGB(255,165,0), "lever")
 					table.insert(trackedLevers, main)
 				end
@@ -1205,9 +1233,9 @@ local function updateESP()
 		if currentRooms then
 			if ESPDoors then
 				pruneTracked(trackedDoors)
-				for _, room in ipairs(getRoomsToScan(currentRooms)) do
+				for _, room in ipairs(currentRooms:GetChildren()) do
 					local door = room:FindFirstChild("Door")
-					if door and door.PrimaryPart and not isPartInSkippedRoom(door.PrimaryPart) and not ActiveESP[door.PrimaryPart] then
+					if door and door.PrimaryPart and not ActiveESP[door.PrimaryPart] then
 						ApplyESP(door.PrimaryPart, Color3.fromRGB(100,255,100), "door " .. ((tonumber(room.Name) or 0) + 1))
 						table.insert(trackedDoors, door.PrimaryPart)
 					end
@@ -1220,18 +1248,28 @@ local function updateESP()
 			pcall(findKeys, currentRooms)
 			pcall(findLevers, currentRooms)
 		end
-		pcall(findMonsters, currentRooms)
+		if ESPMonsters then
+			pruneTracked(trackedMonsters)
+			for _, child in ipairs(workspace:GetChildren()) do
+				if child:IsA("Model") and Entities[child.Name] then
+					local part = child.PrimaryPart or child:FindFirstChild("HumanoidRootPart") or child:FindFirstChild("Hitbox") or child:FindFirstChildWhichIsA("BasePart")
+					if part and part:IsA("BasePart") and not ActiveESP[part] then
+						ApplyESP(part, Color3.fromRGB(255, 0, 0), (Entities[child.Name].Alias or child.Name):lower())
+						table.insert(trackedMonsters, part)
+					end
+				end
+			end
+		end
 		if ESPPlayers then
 			pruneTracked(trackedPlayers)
 			for _, p in ipairs(Players:GetPlayers()) do
-				if p ~= LocalPlayer and p.Character and p.Character.PrimaryPart
-				and not isPartInSkippedRoom(p.Character.PrimaryPart) and not ActiveESP[p.Character.PrimaryPart] then
+				if p ~= LocalPlayer and p.Character and p.Character.PrimaryPart and not ActiveESP[p.Character.PrimaryPart] then
 					ApplyESP(p.Character.PrimaryPart, Color3.fromRGB(0,255,255), p.Name:lower())
 					table.insert(trackedPlayers, p.Character.PrimaryPart)
 				end
 			end
 		end
-		task.wait(ESPOptimized and ((ESPOptimizationMethod == "onscreen" or ESPOptimizationMethod == "onScreen") and 0.15 or 0.3) or 0.8)
+		task.wait(0.5)
 	end
 end
 task.spawn(updateESP)
@@ -1242,6 +1280,13 @@ RunService:BindToRenderStep("VisualController", Enum.RenderPriority.Camera.Value
 		if ThirdPersonEnabled and IsFirstPerson(cam) then cam.CFrame = cam.CFrame * CFrame.new(0,0,10) end
 		if _G.FovOPCamera then cam.FieldOfView = _G.FovOP or 80 end
 	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	if toggles.NoCamShake.Value and v15 then
+		pcall(function() v15.csgo = CFrame.new(0,0,0) end)
+	end
+	updateESPVisibility()
 end)
 
 RunService.Heartbeat:Connect(function()
@@ -1270,7 +1315,7 @@ end)
 local anchorTimer = 0
 RunService.Heartbeat:Connect(function(dt)
 	anchorTimer += dt
-	if toggles.AutoAnchorSolver.Value and getLatestRoomNumber() == 50 and anchorTimer > 0.5 then
+	if toggles.AutoAnchorSolver.Value and (ReplicatedStorage:FindFirstChild("GameData") and ReplicatedStorage.GameData:FindFirstChild("LatestRoom") and ReplicatedStorage.GameData.LatestRoom.Value or 0) == 50 and anchorTimer > 0.5 then
 		anchorTimer = 0
 		local gui = LocalPlayer.PlayerGui:FindFirstChild("MainUI")
 		local ahf = gui and gui:FindFirstChild("AnchorHintFrame")
@@ -1303,7 +1348,7 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 
 	if toggles.AutoMinecart.Value and camera:FindFirstChild("MinecartRig") then
-		local roomNum = getLatestRoomNumber()
+		local roomNum = ReplicatedStorage:FindFirstChild("GameData") and ReplicatedStorage.GameData:FindFirstChild("LatestRoom") and ReplicatedStorage.GameData.LatestRoom.Value or 0
 		if roomNum < 49 then
 			if not LocalPlayer:GetAttribute("NotifyMinecart") then
 				Library:Notification({Text = "[auto minecart] don't move", Duration = 5})
@@ -1426,9 +1471,8 @@ Workspace.DescendantAdded:Connect(function(Object)
 	end)
 end)
 
--- UI Helpers
-local function Tog(sec, name, toggleObj, tip)
-	local t = {
+local function Tog(sec, name, toggleObj)
+	sec:Toggle({
 		Name = name,
 		Default = toggleObj and toggleObj.Value or false,
 		Callback = function(v)
@@ -1436,22 +1480,18 @@ local function Tog(sec, name, toggleObj, tip)
 				toggleObj:SetValue(v)
 			end
 		end
-	}
-	if tip then t.Tooltip = tip end
-	sec:Toggle(t)
+	})
 end
 
-local function Sli(sec, name, mn, mx, def, cb, tip)
-	local t = {Name=name, Min=mn, Max=mx, Default=def, Rounding=1, Compact=false, Callback=cb}
-	if tip then t.Tooltip = tip end
-	sec:Slider(t)
+local function Sli(sec, name, mn, mx, def, cb)
+	sec:Slider({Name=name, Min=mn, Max=mx, Default=def, Rounding=1, Compact=false, Callback=cb})
 end
 
 Tog(MovementSection, "speed bypass", toggles.BypassSpeed)
 Tog(MovementSection, "enable movement speed", toggles.EnableMovementSpeed)
-Sli(MovementSection, "movement speed", 15, 75, 15, function(v) options.MovementSpeed.Value = v end, "walking speed")
+Sli(MovementSection, "movement speed", 15, 75, 15, function(v) options.MovementSpeed.Value = v end)
 Tog(MovementSection, "enable climb speed", toggles.EnableClimbingSpeed)
-Sli(MovementSection, "climbing speed", 15, 30, 15, function(v) options.ClimbingSpeed.Value = v end, "climbing speed")
+Sli(MovementSection, "climbing speed", 15, 30, 15, function(v) options.ClimbingSpeed.Value = v end)
 MovementSection:Toggle({Name="third person", Default=false, Callback=function(v) ThirdPersonEnabled = v end})
 MovementSection:Toggle({Name="can jump", Default=false, Callback=function(enabled)
 	ToggleStates.CanJump = enabled
@@ -1482,7 +1522,7 @@ ExploitsSection:Toggle({Name="anti ransom", Default=false, Callback=function(v)
 			if a90 then a90.Name = "A90_" end
 		end
 	end)
-end, Tooltip="bypasses ransom (a90) damage"})
+end})
 Tog(ExploitsSection, "no camera shake", toggles.NoCamShake)
 ExploitsSection:Toggle({Name="fix broken bridge", Default=false, Callback=function(v)
 	Toggles.FixBrokenBridge = v
@@ -1579,14 +1619,12 @@ ExploitsSection:Toggle({Name="no a-90 damage", Default=false, Callback=function(
 ExploitsSection:Toggle({Name="no screech damage", Default=false, Callback=function(v) _G.NoScreechDamage = v end})
 ExploitsSection:Toggle({Name="no halt damage", Default=false, Callback=function(v) _G.NoHaltDamage = v end})
 
--- Bypass Entities UI Section
-Tog(ArchivesSection, "bypass alma", Toggles.BypassAlma, "Destroys Alma on spawn")
-Tog(ArchivesSection, "anti scribbles", Toggles.AntiScribbles, "Bypasses Scribbles exploit warnings")
-Tog(ArchivesSection, "bypass drones", Toggles.BypassDrones, "Safe drone collision bypass")
-Tog(ArchivesSection, "bypass noise", Toggles.BypassNoise, "Teleports Noise TV stand out of bounds")
-Tog(ArchivesSection, "forget-me-not solver", Toggles.ForgetMeNotSolver, "Automatically solves Forget-Me-Not room puzzles")
+Tog(ArchivesSection, "bypass alma", Toggles.BypassAlma)
+Tog(ArchivesSection, "anti scribbles", Toggles.AntiScribbles)
+Tog(ArchivesSection, "bypass drones", Toggles.BypassDrones)
+Tog(ArchivesSection, "bypass noise", Toggles.BypassNoise)
+Tog(ArchivesSection, "forget-me-not solver", Toggles.ForgetMeNotSolver)
 
--- Infinite Items UI Section
 ArchivesSection:Toggle({Name="infinite items", Default=false, Callback=function(v)
 	InfiniteItemsEnabled = v
 	if not v then
@@ -1613,7 +1651,11 @@ Tog(MinesSection, "auto minecart", Toggles.AutoMinecart)
 Tog(MinesSection, "auto anchor solver", Toggles.AutoAnchorSolver)
 
 AlertsSection:Toggle({Name="monster notification", Default=false, Callback=function(v)
+	if monsterNotifyConn then monsterNotifyConn:Disconnect(); monsterNotifyConn = nil end
+	if monsterNotifyDescConn then monsterNotifyDescConn:Disconnect(); monsterNotifyDescConn = nil end
+
 	_G.NotifyEntity = v
+
 	if v then
 		for _, child in ipairs(workspace:GetChildren()) do
 			if child:IsA("Model") and Entities[child.Name] then
@@ -1724,24 +1766,22 @@ ResetSection:Button({Name='reset character', Callback=function()
 	end
 end})
 
-EspSection:Toggle({Name="optimize esp", Default=false, Callback=function(v)
-	ESPOptimized = v
-	if not v then
-		clearTrackedGroup(trackedDoors)
-		clearTrackedGroup(trackedItems)
-		clearTrackedGroup(trackedBooks)
-		clearTrackedGroup(trackedWardrobes)
-		clearTrackedGroup(trackedKeys)
-		clearTrackedGroup(trackedLevers)
-		clearTrackedGroup(trackedMonsters)
-		clearTrackedGroup(trackedFigure)
-		clearTrackedGroup(trackedPlayers)
-	end
-end})
-EspSection:Dropdown({Name="optimization method", Options={"default","onscreen"}, Default="default", Callback=function(v) ESPOptimizationMethod = v end})
+EspSection:Toggle({Name="optimize esp", Default=false, Callback=function(v) ESPOptimized = v end})
 EspSection:Toggle({Name="doors", Default=false, Callback=function(v) ESPDoors = v; if not v then clearTrackedGroup(trackedDoors) end end})
 EspSection:Toggle({Name="keys", Default=false, Callback=function(v) ESPKeys = v; if not v then clearTrackedGroup(trackedKeys) end end})
-EspSection:Toggle({Name="items", Default=false, Callback=function(v) ESPItems = v; if not v then clearTrackedGroup(trackedItems) end end})
+EspSection:Toggle({Name="items", Default=false, Callback=function(v)
+	ESPItems = v
+	if not v then
+		teardownAllItemESP()
+	else
+		local cr = workspace:FindFirstChild("CurrentRooms")
+		if cr then
+			for _, room in ipairs(cr:GetChildren()) do
+				setupRoomItemESP(room)
+			end
+		end
+	end
+end})
 EspSection:Toggle({Name="books/fuses", Default=false, Callback=function(v) ESPBooks = v; if not v then clearTrackedGroup(trackedBooks) end end})
 EspSection:Toggle({Name="levers", Default=false, Callback=function(v) ESPLevers = v; if not v then clearTrackedGroup(trackedLevers) end end})
 EspSection:Toggle({Name="monsters", Default=false, Callback=function(v)
@@ -1749,6 +1789,20 @@ EspSection:Toggle({Name="monsters", Default=false, Callback=function(v)
 	if not v then
 		clearTrackedGroup(trackedMonsters)
 		clearTrackedGroup(trackedFigure)
+	else
+		for _, child in ipairs(workspace:GetChildren()) do
+			if child:IsA("Model") and Entities[child.Name] then
+				task.spawn(handleEntitySpawn, child)
+			end
+		end
+		task.spawn(function()
+			for _, desc in ipairs(workspace:GetDescendants()) do
+				if desc:IsA("Model") and Entities[desc.Name] then
+					handleEntitySpawn(desc)
+					task.wait()
+				end
+			end
+		end)
 	end
 end})
 EspSection:Toggle({Name="closets", Default=false, Callback=function(v) ESPWardrobes = v; if not v then clearTrackedGroup(trackedWardrobes) end end})
