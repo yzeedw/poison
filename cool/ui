@@ -50,17 +50,20 @@ local function LoadFonts()
             local ttf_path = name .. ".ttf"
             local json_path = name .. ".json"
             
-            if not isfile(ttf_path) then 
-                writefile(ttf_path, b64decode(game:HttpGet(url))) 
+            -- Only download and write files if they don't already exist locally
+            if not (isfile(ttf_path) and isfile(json_path)) then
+                if not isfile(ttf_path) then 
+                    writefile(ttf_path, b64decode(game:HttpGet(url))) 
+                end
+                
+                local data = { 
+                    name = name, 
+                    faces = { 
+                        { name = "Regular", weight = 400, style = "normal", assetId = getcustomasset(ttf_path) } 
+                    } 
+                }
+                writefile(json_path, HttpService:JSONEncode(data))
             end
-            
-            local data = { 
-                name = name, 
-                faces = { 
-                    { name = "Regular", weight = 400, style = "normal", assetId = getcustomasset(ttf_path) } 
-                } 
-            }
-            writefile(json_path, HttpService:JSONEncode(data))
             
             LoadedFonts[name] = Font.new(getcustomasset(json_path), Enum.FontWeight.Regular)
         end)
@@ -200,7 +203,6 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = (gethui and gethui()) or CoreGui
 
--- FIX #2: Created a separate ScreenGui strictly for Notifications so it stays visible when ScreenGui.Enabled = false
 local NotifGui = Instance.new("ScreenGui")
 NotifGui.Name = "CelestiteNotifUI"
 NotifGui.ResetOnSpawn = false
@@ -248,7 +250,7 @@ NotifHolder.Name = "NotifHolder"
 NotifHolder.Size = UDim2.new(0, 250, 1, -40)
 NotifHolder.Position = UDim2.new(0, 10, 0, 10)
 NotifHolder.BackgroundTransparency = 1
-NotifHolder.Parent = NotifGui -- Parented to NotifGui instead of main ScreenGui
+NotifHolder.Parent = NotifGui
 
 local NotifList = Instance.new("UIListLayout")
 NotifList.Padding = UDim.new(0, 4)
@@ -993,7 +995,6 @@ function Library:Window(title, size, toggleOpts)
                 end
             })
 
-            -- FIX #3: Added a background preload check for custom image IDs 
             local CustomImageTextBox
             CustomImageTextBox = ToggleSection:TextBox({
                 Name = "Custom Image Asset ID",
@@ -1007,13 +1008,11 @@ function Library:Window(title, size, toggleOpts)
                     local testImg = Instance.new("ImageLabel")
                     testImg.Image = formattedId
                     
-                    -- Check validity on a separate thread so it doesn't freeze the game
                     task.spawn(function()
                         local success, err = pcall(function()
                             game:GetService("ContentProvider"):PreloadAsync({testImg})
                         end)
                         
-                        -- If it completely failed or the image did not load at all
                         if not success or not testImg.IsLoaded then
                             Library:Notification({Text = "Invalid Image ID! Reverting.", Duration = 3})
                             
@@ -1068,7 +1067,6 @@ function Library:Window(title, size, toggleOpts)
                     local val = nil
                     if type(v) == "table" then if v.Get then val = v.Get() elseif v.GetState then val = v.GetState() elseif v.GetText then val = v.GetText() end end
                     
-                    -- FIX #1: Corrected "v.G" and "v.B" to "val.G" and "val.B" so saving colors stops erroring out
                     if typeof(val) == "Color3" then val = {val.R * 255, val.G * 255, val.B * 255} end
                     
                     if val ~= nil then data.Flags[k] = val end
