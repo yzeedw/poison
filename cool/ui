@@ -135,7 +135,7 @@ Library.Theme = {
     SectionBackground = Color3.fromRGB(38, 38, 38)
 }
 
-Library.Elements = { Toggles = {}, Sliders = {}, Sections = {}, Tabs = {}, Windows = {}, Labels = {}, Dropdowns = {}, Outlines = {}, Inlines = {}, ColorPickers = {}, Buttons = {}, TextBoxes = {}, AllTextObjects = {}, TabTextObjects = {} }
+Library.Elements = { Toggles = {}, Sliders = {}, Sections = {}, Tabs = {}, Windows = {}, Labels = {}, Dropdowns = {}, Outlines = {}, Inlines = {}, ColorPickers = {}, Buttons = {}, TextBoxes = {}, AllTextObjects = {}, TabTextObjects = {}, Icons = {} }
 Library.Flags = {}
 
 function Library:UpdateTheme()
@@ -192,6 +192,272 @@ function Library:UpdateTheme()
             drop.UpdateVisuals()
         end
     end
+
+    for _, ic in pairs(Library.Elements.Icons) do
+        if ic.Holder and ic.Holder.Parent then Library:RetintIcon(ic) end
+    end
+end
+
+local Icons = { cache = {}, dir = "celestite_icons" }
+Library.Icons = Icons
+local ICON_URL = "https://unpkg.com/lucide-static/icons/%s.svg"
+local F = string.format
+
+local function attrs(s)
+    local a = {}
+    for k, v in s:gmatch('([%w%-:]+)%s*=%s*"([^"]*)"') do a[k] = v end
+    return a
+end
+
+local function cubic(pts, p0, p1, p2, p3)
+    for i = 1, 12 do
+        local t = i / 12; local u = 1 - t
+        pts[#pts + 1] = p0 * (u*u*u) + p1 * (3*u*u*t) + p2 * (3*u*t*t) + p3 * (t*t*t)
+    end
+end
+
+local function quad(pts, p0, p1, p2)
+    for i = 1, 8 do
+        local t = i / 8; local u = 1 - t
+        pts[#pts + 1] = p0 * (u*u) + p1 * (2*u*t) + p2 * (t*t)
+    end
+end
+
+local function arc(pts, p0, rx, ry, phi, fa, fs, p1)
+    if rx == 0 or ry == 0 or p0 == p1 then
+        pts[#pts + 1] = p1
+        return
+    end
+    rx, ry = math.abs(rx), math.abs(ry)
+    local ph = math.rad(phi); local c, s = math.cos(ph), math.sin(ph)
+    local dx, dy = (p0.X - p1.X) / 2, (p0.Y - p1.Y) / 2
+    local x1, y1 = c*dx + s*dy, -s*dx + c*dy
+    local lam = x1*x1/(rx*rx) + y1*y1/(ry*ry)
+    if lam > 1 then local k = math.sqrt(lam); rx *= k; ry *= k end
+    local num = rx*rx*ry*ry - rx*rx*y1*y1 - ry*ry*x1*x1
+    local den = rx*rx*y1*y1 + ry*ry*x1*x1
+    local co = math.sqrt(math.max(0, num / den))
+    if fa == fs then co = -co end
+    local cxp, cyp = co*rx*y1/ry, -co*ry*x1/rx
+    local cx = c*cxp - s*cyp + (p0.X + p1.X) / 2
+    local cy = s*cxp + c*cyp + (p0.Y + p1.Y) / 2
+    local function ang(ux, uy, vx, vy) return math.atan2(ux*vy - uy*vx, ux*vx + uy*vy) end
+    local th1 = ang(1, 0, (x1 - cxp)/rx, (y1 - cyp)/ry)
+    local dth = ang((x1 - cxp)/rx, (y1 - cyp)/ry, (-x1 - cxp)/rx, (-y1 - cyp)/ry)
+    if fs == 0 and dth > 0 then dth -= 2*math.pi elseif fs == 1 and dth < 0 then dth += 2*math.pi end
+    local n = math.max(4, math.ceil(math.abs(dth) / (math.pi / 8)))
+    for i = 1, n do
+        local a = th1 + dth * i / n
+        pts[#pts + 1] = Vector2.new(cx + c*rx*math.cos(a) - s*ry*math.sin(a), cy + s*rx*math.cos(a) + c*ry*math.sin(a))
+    end
+end
+
+local function parsePath(d)
+    local subs, pts = {}, nil
+    local cur, start = Vector2.new(0, 0), Vector2.new(0, 0)
+    local i, n = 1, #d
+    local function skip() i = d:find("[^%s,]", i) or (n + 1) end
+    local function num()
+        skip()
+        local s, e = d:find("^[-+]?%d*%.?%d+", i)
+        if not s then
+            i = n + 1
+            return 0
+        end
+        local _, e2 = d:find("^[eE][-+]?%d+", e + 1)
+        if e2 then e = e2 end
+        local v = tonumber(d:sub(i, e)); i = e + 1
+        return v or 0
+    end
+    local function flag() skip(); local c = d:sub(i, i); i += 1; return c == "1" and 1 or 0 end
+    local function begin() if not pts then pts = {cur}; subs[#subs + 1] = {pts = pts} end end
+    local cmd, lc, lq
+    while true do
+        skip()
+        if i > n then break end
+        local ch = d:sub(i, i)
+        if ch:match("%a") then cmd = ch; i += 1 elseif not cmd then break end
+        local c = cmd:lower(); local rel = (cmd == c)
+        local ox, oy = rel and cur.X or 0, rel and cur.Y or 0
+        local nc, nq
+        if c == "z" then
+            if pts then pts[#pts + 1] = start end
+            cur = start; pts = nil; cmd = nil
+        elseif c == "m" then
+            local p = Vector2.new(ox + num(), oy + num())
+            pts = {p}; subs[#subs + 1] = {pts = pts}; cur = p; start = p
+            cmd = rel and "l" or "L"
+        elseif c == "l" then
+            begin(); local p = Vector2.new(ox + num(), oy + num()); pts[#pts + 1] = p; cur = p
+        elseif c == "h" then
+            begin(); local p = Vector2.new(ox + num(), cur.Y); pts[#pts + 1] = p; cur = p
+        elseif c == "v" then
+            begin(); local p = Vector2.new(cur.X, oy + num()); pts[#pts + 1] = p; cur = p
+        elseif c == "c" then
+            begin()
+            local p1 = Vector2.new(ox + num(), oy + num())
+            local p2 = Vector2.new(ox + num(), oy + num())
+            local p3 = Vector2.new(ox + num(), oy + num())
+            cubic(pts, cur, p1, p2, p3); nc = p2; cur = p3
+        elseif c == "s" then
+            begin()
+            local p1 = lc and (cur * 2 - lc) or cur
+            local p2 = Vector2.new(ox + num(), oy + num())
+            local p3 = Vector2.new(ox + num(), oy + num())
+            cubic(pts, cur, p1, p2, p3); nc = p2; cur = p3
+        elseif c == "q" then
+            begin()
+            local p1 = Vector2.new(ox + num(), oy + num())
+            local p2 = Vector2.new(ox + num(), oy + num())
+            quad(pts, cur, p1, p2); nq = p1; cur = p2
+        elseif c == "t" then
+            begin()
+            local p1 = lq and (cur * 2 - lq) or cur
+            local p2 = Vector2.new(ox + num(), oy + num())
+            quad(pts, cur, p1, p2); nq = p1; cur = p2
+        elseif c == "a" then
+            begin()
+            local rx, ry, phi = num(), num(), num()
+            local fa, fs = flag(), flag()
+            local p = Vector2.new(ox + num(), oy + num())
+            arc(pts, cur, rx, ry, phi, fa, fs, p); cur = p
+        else
+            break
+        end
+        lc, lq = nc, nq
+    end
+    return subs
+end
+
+local function parseSVG(svg)
+    local sw = tonumber(svg:match('stroke%-width="([%d%.]+)"')) or 2
+    local shapes = {}
+    local function add(d)
+        for _, sub in ipairs(parsePath(d)) do
+            if #sub.pts > 1 then shapes[#shapes + 1] = sub.pts end
+        end
+    end
+    local function N(v) return tonumber(v) or 0 end
+    for tag, body in svg:gmatch("<(%a+)([^>]*)>") do
+        local a = attrs(body)
+        if a.stroke ~= "none" then
+            if tag == "path" and a.d then
+                add(a.d)
+            elseif tag == "line" then
+                add(F("M%f %f L%f %f", N(a.x1), N(a.y1), N(a.x2), N(a.y2)))
+            elseif tag == "polyline" and a.points then
+                add("M" .. a.points)
+            elseif tag == "polygon" and a.points then
+                add("M" .. a.points .. "z")
+            elseif tag == "rect" then
+                local x, y, w, h = N(a.x), N(a.y), N(a.width), N(a.height)
+                local r = math.min(N(a.rx ~= nil and a.rx or a.ry), w / 2, h / 2)
+                if r <= 0 then
+                    add(F("M%f %f h%f v%f h%f z", x, y, w, h, -w))
+                else
+                    add(F("M%f %f H%f A%f %f 0 0 1 %f %f V%f A%f %f 0 0 1 %f %f H%f A%f %f 0 0 1 %f %f V%f A%f %f 0 0 1 %f %f z",
+                        x + r, y, x + w - r, r, r, x + w, y + r, y + h - r, r, r, x + w - r, y + h,
+                        x + r, r, r, x, y + h - r, y + r, r, r, x + r, y))
+                end
+            elseif tag == "circle" then
+                local cx, cy, r = N(a.cx), N(a.cy), N(a.r)
+                add(F("M%f %f A%f %f 0 1 0 %f %f A%f %f 0 1 0 %f %f z", cx - r, cy, r, r, cx + r, cy, r, r, cx - r, cy))
+            elseif tag == "ellipse" then
+                local cx, cy, rx, ry = N(a.cx), N(a.cy), N(a.rx), N(a.ry)
+                add(F("M%f %f A%f %f 0 1 0 %f %f A%f %f 0 1 0 %f %f z", cx - rx, cy, rx, ry, cx + rx, cy, rx, ry, cx - rx, cy))
+            end
+        end
+    end
+    return { sw = sw, shapes = shapes }
+end
+
+function Icons.get(name)
+    local c = Icons.cache[name]
+    if c ~= nil then return c or nil end
+    local safe = (tostring(name):gsub("[^%w%-_]", "_"))
+    local path = Icons.dir .. "/" .. safe .. ".svg"
+    local svg
+    if isfile and readfile and isfile(path) then
+        pcall(function() svg = readfile(path) end)
+    end
+    if not svg or not svg:find("<svg") then
+        local url = tostring(name):find("^https?://") and name or ICON_URL:format(name)
+        local ok, res = pcall(game.HttpGet, game, url)
+        if ok and type(res) == "string" and res:find("<svg") then
+            svg = res
+            if writefile then
+                pcall(function()
+                    if makefolder and isfolder and not isfolder(Icons.dir) then makefolder(Icons.dir) end
+                    writefile(path, svg)
+                end)
+            end
+        end
+    end
+    local data = false
+    if svg then
+        local ok, built = pcall(parseSVG, svg)
+        if ok and #built.shapes > 0 then data = built end
+    end
+    Icons.cache[name] = data
+    return data or nil
+end
+
+function Library:RetintIcon(rec)
+    local c = rec.Color
+    if type(c) == "function" then
+        c = c(Library.Theme)
+    elseif type(c) == "string" then
+        c = Library.Theme[c] or Library.Theme.Text
+    end
+    if typeof(c) ~= "Color3" then c = Library.Theme.Text end
+    for _, f in ipairs(rec.Frames) do f.BackgroundColor3 = c end
+end
+
+function Library:Icon(parent, name, size, color, z)
+    size = size or 16
+    local holder = Instance.new("Frame")
+    holder.Name = "Icon"
+    holder.BackgroundTransparency = 1
+    holder.BorderSizePixel = 0
+    holder.Size = UDim2.fromOffset(size, size)
+    holder.ZIndex = z or 1
+    holder.Parent = parent
+
+    local rec = { Holder = holder, Frames = {}, Color = color or "Text" }
+    table.insert(Library.Elements.Icons, rec)
+    function rec.SetColor(c) rec.Color = c; Library:RetintIcon(rec) end
+    function rec.Destroy() holder:Destroy() end
+
+    task.spawn(function()
+        local data = Icons.get(name)
+        if not data then warn("Icon not found: " .. tostring(name)) return end
+        if not holder.Parent then return end
+        local scale = size / 24
+        local thick = math.max(1, data.sw * scale)
+        for _, pts in ipairs(data.shapes) do
+            for k = 1, #pts - 1 do
+                local a, b = pts[k] * scale, pts[k + 1] * scale
+                local d = b - a
+                local len = d.Magnitude
+                if len > 0.01 then
+                    local f = Instance.new("Frame")
+                    f.BorderSizePixel = 0
+                    f.AnchorPoint = Vector2.new(0.5, 0.5)
+                    f.Position = UDim2.fromOffset((a.X + b.X) / 2, (a.Y + b.Y) / 2)
+                    f.Size = UDim2.fromOffset(len + thick, thick)
+                    f.Rotation = math.deg(math.atan2(d.Y, d.X))
+                    f.ZIndex = holder.ZIndex
+                    local corner = Instance.new("UICorner")
+                    corner.CornerRadius = UDim.new(0.5, 0)
+                    corner.Parent = f
+                    f.Parent = holder
+                    rec.Frames[#rec.Frames + 1] = f
+                end
+            end
+        end
+        Library:RetintIcon(rec)
+    end)
+    return rec
 end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -200,7 +466,6 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = (gethui and gethui()) or CoreGui
 
--- FIX #2: Created a separate ScreenGui strictly for Notifications so it stays visible when ScreenGui.Enabled = false
 local NotifGui = Instance.new("ScreenGui")
 NotifGui.Name = "CelestiteNotifUI"
 NotifGui.ResetOnSpawn = false
@@ -248,7 +513,7 @@ NotifHolder.Name = "NotifHolder"
 NotifHolder.Size = UDim2.new(0, 250, 1, -40)
 NotifHolder.Position = UDim2.new(0, 10, 0, 10)
 NotifHolder.BackgroundTransparency = 1
-NotifHolder.Parent = NotifGui -- Parented to NotifGui instead of main ScreenGui
+NotifHolder.Parent = NotifGui
 
 local NotifList = Instance.new("UIListLayout")
 NotifList.Padding = UDim.new(0, 4)
@@ -576,7 +841,7 @@ function Library:Window(title, size, toggleOpts)
         if not gpe and input.KeyCode == Enum.KeyCode.RightShift then ToggleUI() end
     end)
 
-    function Window:Tab(name)
+    function Window:Tab(name, icon)
         local Tab = {}
 
         local TabButton = Create("TextButton", {
@@ -593,8 +858,8 @@ function Library:Window(title, size, toggleOpts)
         local TabText = Create("TextLabel", {
             Name = "Title",
             Text = name,
-            Size = UDim2.new(1, -16, 1, 0),
-            Position = UDim2.new(0, 12, 0, 0),
+            Size = UDim2.new(1, icon and -34 or -16, 1, 0),
+            Position = UDim2.new(0, icon and 30 or 12, 0, 0),
             BackgroundTransparency = 1,
             FontFace = true,
             TextSize = Library.Config.FontSize,
@@ -607,6 +872,11 @@ function Library:Window(title, size, toggleOpts)
             ZIndex = 5,
             Parent = TabButton
         })
+
+        if icon then
+            local ic = Library:Icon(TabButton, icon, 14, "Text", 5)
+            ic.Holder.Position = UDim2.fromOffset(10, 5)
+        end
 
         local TabAccent = Create("Frame", {
             Name = "Accent",
@@ -693,7 +963,7 @@ function Library:Window(title, size, toggleOpts)
 
         if #Window.Tabs == 1 then Activate() end
 
-        function Tab:Section(sectionName, side)
+        function Tab:Section(sectionName, side, icon)
             local Section = {}
             local parent = (side and side:lower() == "right") and RightColumn or LeftColumn
             
@@ -712,6 +982,11 @@ function Library:Window(title, size, toggleOpts)
 
             local Header = Create("TextLabel", { Name = "Header", Text = sectionName, Size = UDim2.new(1, -8, 0, 18), Position = UDim2.new(0, 4, 0, 2), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.None, ZIndex = 5, Parent = SectionFrame, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
             table.insert(Library.Elements.Sections, { Frame = SectionFrame, Header = Header, Accent = SectionAccent })
+
+            if icon then
+                local ic = Library:Icon(SectionFrame, icon, 12, "Accent", 6)
+                ic.Holder.Position = UDim2.fromOffset(6, 5)
+            end
             
             local ElementList = Create("Frame", { Name = "Elements", Size = UDim2.new(1, -10, 0, 0), Position = UDim2.new(0, 5, 0, 20), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 5, Parent = SectionFrame, ClipsDescendants = false })
             Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4), Parent = ElementList})
@@ -722,6 +997,10 @@ function Library:Window(title, size, toggleOpts)
                 local Box = Create("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Library.Theme.Background, ZIndex = 7, Parent = Holder })
                 ApplyCelestiteStyle(Box)
                 local Label = Create("TextLabel", { Text = opts.Name or "Button", Size = UDim2.new(1, -10, 1, 0), Position = UDim2.new(0, 5, 0, 0), BackgroundTransparency = 1, FontFace = true, TextSize = Library.Config.FontSize, TextColor3 = Library.Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.None, ZIndex = 8, Parent = Box, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0,0,0) })
+                if opts.Icon then
+                    local ic = Library:Icon(Box, opts.Icon, 14, "Text", 8)
+                    ic.Holder.Position = UDim2.fromOffset(6, 4)
+                end
                 table.insert(Library.Elements.Buttons, Box)
                 local btn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 9, Parent = Box })
                 btn.MouseButton1Click:Connect(function()
@@ -969,7 +1248,7 @@ function Library:Window(title, size, toggleOpts)
         end
         
         function Tab:Themes(side)
-            local ThemeSection = Tab:Section("Theme & Font Settings", side or "Right")
+            local ThemeSection = Tab:Section("Theme & Font Settings", side or "Right", "palette")
             ThemeSection:Dropdown({ Name = "Font Style", Default = Library.Config.Font, Options = FontNames, Callback = function(fontName) Library.Config.Font = fontName; local newFont = GetFont(); for _, textObj in pairs(Library.Elements.AllTextObjects) do if textObj and textObj.Parent then pcall(function() textObj.FontFace = newFont end) end end end })
             ThemeSection:ColorPicker({ Name = "Accent Color", Default = Library.Theme.Accent, Callback = function(c) Library.Theme.Accent = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Background Color", Default = Library.Theme.Background, Callback = function(c) Library.Theme.Background = c; Library:UpdateTheme() end })
@@ -979,7 +1258,7 @@ function Library:Window(title, size, toggleOpts)
             ThemeSection:ColorPicker({ Name = "Inline Color", Default = Library.Theme.Inline, Callback = function(c) Library.Theme.Inline = c; Library:UpdateTheme() end })
             ThemeSection:ColorPicker({ Name = "Section Background", Default = Library.Theme.SectionBackground, Callback = function(c) Library.Theme.SectionBackground = c; Library:UpdateTheme() end })
 
-            local ToggleSection = Tab:Section("Toggle UI Customization", side or "Right")
+            local ToggleSection = Tab:Section("Toggle UI Customization", side or "Right", "toggle-right")
             local customIconId = currentImage or "10639756312"
             local selectedMethod = currentMethod or "Custom"
 
@@ -993,7 +1272,6 @@ function Library:Window(title, size, toggleOpts)
                 end
             })
 
-            -- FIX #3: Added a background preload check for custom image IDs 
             local CustomImageTextBox
             CustomImageTextBox = ToggleSection:TextBox({
                 Name = "Custom Image Asset ID",
@@ -1007,13 +1285,11 @@ function Library:Window(title, size, toggleOpts)
                     local testImg = Instance.new("ImageLabel")
                     testImg.Image = formattedId
                     
-                    -- Check validity on a separate thread so it doesn't freeze the game
                     task.spawn(function()
                         local success, err = pcall(function()
                             game:GetService("ContentProvider"):PreloadAsync({testImg})
                         end)
                         
-                        -- If it completely failed or the image did not load at all
                         if not success or not testImg.IsLoaded then
                             Library:Notification({Text = "Invalid Image ID! Reverting.", Duration = 3})
                             
@@ -1047,7 +1323,7 @@ function Library:Window(title, size, toggleOpts)
         end
 
         function Tab:Configs(side)
-            local ConfigSection = Tab:Section("Configuration", side or "Left")
+            local ConfigSection = Tab:Section("Configuration", side or "Left", "save")
             local ConfigPath = "celestite/"
             if not isfolder(ConfigPath) then makefolder(ConfigPath) end
             local ConfigName = ""
@@ -1059,7 +1335,7 @@ function Library:Window(title, size, toggleOpts)
                 ConfigList:Refresh(names)
             end
             ConfigList.OnOpen = Refresh
-            ConfigSection:Button({ Name = "Save Config", Callback = function()
+            ConfigSection:Button({ Name = "Save Config", Icon = "save", Callback = function()
                 local saveTarget = ConfigName ~= "" and ConfigName or ConfigList:Get()
                 if not saveTarget or saveTarget == "" or saveTarget == "None" then Library:Notification({ Text = "Enter a config name", Duration = 3 }); return end
                 local data = { Theme = {}, Flags = {} }
@@ -1068,7 +1344,6 @@ function Library:Window(title, size, toggleOpts)
                     local val = nil
                     if type(v) == "table" then if v.Get then val = v.Get() elseif v.GetState then val = v.GetState() elseif v.GetText then val = v.GetText() end end
                     
-                    -- FIX #1: Corrected "v.G" and "v.B" to "val.G" and "val.B" so saving colors stops erroring out
                     if typeof(val) == "Color3" then val = {val.R * 255, val.G * 255, val.B * 255} end
                     
                     if val ~= nil then data.Flags[k] = val end
@@ -1076,7 +1351,7 @@ function Library:Window(title, size, toggleOpts)
                 local success, err = pcall(function() writefile(ConfigPath .. saveTarget .. ".json", HttpService:JSONEncode(data)) end)
                 if success then Refresh(); Library:Notification({ Text = "Saved config: " .. saveTarget, Duration = 3 }) else Library:Notification({ Text = "Error saving config", Duration = 5 }) end
             end })
-            ConfigSection:Button({ Name = "Load Config", Callback = function()
+            ConfigSection:Button({ Name = "Load Config", Icon = "folder-open", Callback = function()
                 local selected = ConfigList:Get()
                 if not selected or selected == "" or selected == "None" then return end
                 local path = ConfigPath .. selected .. ".json"
@@ -1089,7 +1364,7 @@ function Library:Window(title, size, toggleOpts)
                 end)
                 if success then Library:Notification({ Text = "Loaded config: " .. tostring(selected), Duration = 3 }) else Library:Notification({ Text = "Error loading config", Duration = 5 }) end
             end })
-            ConfigSection:Button({ Name = "Delete Config", Callback = function()
+            ConfigSection:Button({ Name = "Delete Config", Icon = "trash-2", Callback = function()
                 local selected = ConfigList:Get()
                 if not selected or selected == "" or selected == "None" then return end
                 pcall(function() delfile(ConfigPath .. selected .. ".json") end)
